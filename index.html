@@ -1,0 +1,3441 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>One Page</title>
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #020617;
+      background-image:
+        radial-gradient(circle at 15% 15%, rgba(212, 175, 55, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(29, 63, 122, 0.25) 0%, transparent 50%),
+        linear-gradient(135deg, #020617 0%, #040d21 50%, #000000 100%);
+    }
+
+    .tool-panel {
+      position: fixed;
+      left: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 240px;
+      max-height: 88vh;
+      overflow: auto;
+      padding: 10px;
+      border-radius: 10px;
+      background: rgba(7, 18, 43, 0.92);
+      border: 1px solid rgba(212, 175, 55, 0.55);
+      color: #f2d78a;
+      font: 13px/1.25 Arial, sans-serif;
+      z-index: 1200;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      transition: transform 220ms ease, opacity 220ms ease;
+    }
+
+    .tool-panel.hidden {
+      transform: translate(-115%, -50%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .tool-show {
+      position: fixed;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 1201;
+      display: none;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(212, 175, 55, 0.7);
+      background: rgba(7, 18, 43, 0.95);
+      color: #f2d78a;
+      cursor: pointer;
+    }
+
+    .tool-show.visible {
+      display: block;
+    }
+
+    .tool-panel .title {
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .tool-panel .row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tool-panel select,
+    .tool-panel input,
+    .tool-panel button {
+      font: 12px Arial, sans-serif;
+    }
+
+    .tool-panel input {
+      width: 68px;
+    }
+
+    .tool-panel .move-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 4px;
+      width: 120px;
+    }
+
+    .placed-sprite.editable-drag {
+      cursor: grab;
+    }
+
+    .placed-sprite.dragging {
+      cursor: grabbing;
+    }
+
+    .tool-panel,
+    .tool-show {
+      display: none !important;
+    }
+
+
+    .container {
+      position: relative;
+      width: 1272px;
+      height: 716px;
+      transform: translateX(160px);
+      overflow: hidden;
+      border-radius: 24px;
+      background-color: #050a14;
+      border: 4px solid #b8860b;
+      box-shadow:
+        0 0 0 8px #020617,
+        0 0 0 12px #d4af37,
+        0 40px 100px rgba(0, 0, 0, 0.95);
+    }
+
+    .bg-video {
+      display: none;
+    }
+
+    .bg-webgl {
+      position: absolute;
+      left: -120px;
+      top: 0;
+      width: calc(100% + 240px);
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .bg-webgl canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .dice-view {
+      position: absolute;
+      left: 604px;
+      top: 300px;
+      z-index: 300;
+      width: 150px;
+      height: 150px;
+      transform: translate(-50%, -62%);
+    }
+
+    .chip-view {
+      position: absolute;
+      left: 1041px;
+      top: 620px;
+      z-index: 200;
+      width: 102px;
+      height: 102px;
+      transform: translate(-50%, -104%);
+      transition: left 520ms ease, top 520ms ease;
+      pointer-events: none;
+    }
+
+    .placed-sprite {
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform-origin: center center;
+      pointer-events: auto;
+      cursor: pointer;
+      user-select: none;
+      backface-visibility: hidden;
+      image-rendering: auto;
+      will-change: transform;
+    }
+
+    .controls {
+      position: absolute;
+      left: 604px;
+      top: 400px;
+      z-index: 350;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 2px solid #ffdb70;
+      background: linear-gradient(180deg, #fce5d8 0%, #ebb49c 100%);
+      box-shadow:
+        0 4px 0 #b37357,
+        0 8px 16px rgba(0, 0, 0, 0.4),
+        inset 0 2px 4px rgba(255, 255, 255, 0.6),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(2px);
+    }
+
+    .controls::before {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 5px 5px, #ffdb70 2px, #d4931a 4px, transparent 5px),
+        radial-gradient(circle at calc(100% - 5px) 5px, #ffdb70 2px, #d4931a 4px, transparent 5px),
+        radial-gradient(circle at 5px calc(100% - 5px), #ffdb70 2px, #d4931a 4px, transparent 5px),
+        radial-gradient(circle at calc(100% - 5px) calc(100% - 5px), #ffdb70 2px, #d4931a 4px, transparent 5px);
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+    }
+
+    #roll-btn {
+      position: relative;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 16px;
+      font: 900 13px "Arial Rounded MT Bold", "Comic Sans MS", Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #fff;
+      background: linear-gradient(180deg, #7ad444 0%, #4a9e18 100%);
+      cursor: pointer;
+      box-shadow:
+        0 4px 0 #2b610c,
+        0 6px 8px rgba(0, 0, 0, 0.3),
+        inset 0 2px 3px rgba(255, 255, 255, 0.4);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      transition: transform 100ms ease, box-shadow 100ms ease;
+      z-index: 2;
+    }
+
+    #roll-btn:hover {
+      background: linear-gradient(180deg, #8de655 0%, #59b324 100%);
+    }
+
+    #roll-btn:active {
+      transform: translateY(2px);
+      box-shadow:
+        0 2px 0 #2b610c,
+        0 2px 4px rgba(0, 0, 0, 0.3),
+        inset 0 1px 2px rgba(255, 255, 255, 0.4);
+    }
+
+    #roll-result {
+      position: relative;
+      min-width: 100px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 2px solid #e29471;
+      color: #6a321d;
+      font: 900 13px "Arial Rounded MT Bold", "Comic Sans MS", Arial, sans-serif;
+      background: linear-gradient(180deg, #fffcf0 0%, #fae6c6 100%);
+      text-align: center;
+      text-transform: uppercase;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 1px 0 rgba(255, 255, 255, 0.6);
+      z-index: 2;
+    }
+
+    .svitok-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(5, 13, 32, 0.6);
+      backdrop-filter: blur(2px);
+    }
+
+    .svitok-overlay.visible {
+      display: flex;
+    }
+
+    .svitok-card {
+      position: relative;
+      width: min(99vw, 1080px);
+      aspect-ratio: 1.18;
+      background: url("svitok.png") center/contain no-repeat;
+      filter: drop-shadow(0 16px 28px rgba(0, 0, 0, 0.55));
+    }
+
+    .svitok-text {
+      position: absolute;
+      left: 17%;
+      top: 25%;
+      width: 69%;
+      height: 73%;
+      margin: 0;
+      overflow: hidden;
+      white-space: pre-line;
+      text-align: center;
+      color: #4a2d13;
+      font: 700 clamp(11px, 1.05vw, 15px) / 1.28 "Times New Roman", serif;
+      text-shadow: 0 1px 0 rgba(255, 248, 220, 0.4);
+    }
+
+    .svitok-close {
+      position: absolute;
+      right: 18%;
+      top: 13%;
+      border: 1px solid rgba(95, 57, 24, 0.5);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font: 700 13px Arial, sans-serif;
+      color: #4a2d13;
+      background: rgba(255, 241, 201, 0.75);
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      transition: background 0.2s ease;
+    }
+
+    .svitok-close:hover {
+      background: rgba(255, 250, 220, 0.9);
+    }
+
+    .bonus-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(5, 13, 32, 0.62);
+      backdrop-filter: blur(2px);
+    }
+
+    .bonus-overlay.visible {
+      display: flex;
+    }
+
+    .bonus-card {
+      width: min(92vw, 620px);
+      border-radius: 16px;
+      border: 1px solid rgba(212, 175, 55, 0.8);
+      background: linear-gradient(180deg, rgba(14, 33, 70, 0.98), rgba(7, 19, 44, 0.98));
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(255, 220, 125, 0.2) inset;
+      padding: 18px 18px 16px;
+      color: #f5e1a5;
+      font-family: Arial, sans-serif;
+    }
+
+    .bonus-title {
+      margin: 0 0 10px;
+      font: 700 18px/1.3 Arial, sans-serif;
+      color: #ffd979;
+    }
+
+    .bonus-task {
+      margin: 0;
+      font: 700 16px/1.5 Arial, sans-serif;
+      color: #fff1ca;
+    }
+
+    .bonus-slot {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(245, 205, 96, 0.72);
+      background: rgba(39, 27, 8, 0.7);
+      color: #ffd986;
+      font: 700 16px/1.4 Arial, sans-serif;
+      word-break: break-word;
+    }
+
+    .bonus-actions {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .bonus-close {
+      border: 1px solid #f0c65a;
+      border-radius: 9px;
+      padding: 8px 12px;
+      font: 700 13px Arial, sans-serif;
+      color: #fff4cf;
+      background: linear-gradient(180deg, #2f5db2 0%, #1b3f86 100%);
+      cursor: pointer;
+    }
+
+    .gift-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(5, 13, 32, 0.62);
+      backdrop-filter: blur(2px);
+    }
+
+    .gift-overlay.visible {
+      display: flex;
+    }
+
+    .gift-card {
+      width: min(92vw, 560px);
+      border-radius: 16px;
+      border: 1px solid rgba(212, 175, 55, 0.8);
+      background: linear-gradient(180deg, rgba(14, 33, 70, 0.98), rgba(7, 19, 44, 0.98));
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(255, 220, 125, 0.2) inset;
+      padding: 18px 18px 16px;
+      color: #f5e1a5;
+      font-family: Arial, sans-serif;
+    }
+
+    .gift-title {
+      margin: 0 0 10px;
+      font: 700 18px/1.3 Arial, sans-serif;
+      color: #ffd979;
+    }
+
+    .gift-task {
+      margin: 0;
+      font: 700 16px/1.5 Arial, sans-serif;
+      color: #fff1ca;
+      white-space: pre-line;
+    }
+
+    .gift-actions {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .gift-close {
+      border: 1px solid #f0c65a;
+      border-radius: 9px;
+      padding: 8px 12px;
+      font: 700 13px Arial, sans-serif;
+      color: #fff4cf;
+      background: linear-gradient(180deg, #2f5db2 0%, #1b3f86 100%);
+      cursor: pointer;
+    }
+
+    /* === DEAD CELL OVERLAY === */
+    .dead-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(20, 5, 5, 0.75);
+      backdrop-filter: blur(2px);
+    }
+    .dead-overlay.visible { display: flex; }
+    .dead-card {
+      width: min(92vw, 560px);
+      border-radius: 16px;
+      border: 1px solid rgba(212, 55, 55, 0.8);
+      background: linear-gradient(180deg, rgba(70, 14, 14, 0.98), rgba(44, 7, 7, 0.98));
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(255, 125, 125, 0.2) inset;
+      padding: 18px 18px 16px;
+      color: #f5a5a5;
+      font-family: Arial, sans-serif;
+    }
+    .dead-title {
+      margin: 0 0 10px;
+      font: 700 20px/1.3 Arial, sans-serif;
+      color: #ff7979;
+    }
+    .dead-task {
+      margin: 0;
+      font: 700 16px/1.5 Arial, sans-serif;
+      color: #ffcaca;
+      white-space: pre-line;
+    }
+    .dead-actions {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .dead-close {
+      border: 1px solid #f05a5a;
+      border-radius: 9px;
+      padding: 8px 12px;
+      font: 700 13px Arial, sans-serif;
+      color: #ffcfcf;
+      background: linear-gradient(180deg, #b22f2f 0%, #861b1b 100%);
+      cursor: pointer;
+    }
+
+    .zadanie-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(5, 13, 32, 0.62);
+      backdrop-filter: blur(2px);
+    }
+
+    .zadanie-overlay.visible {
+      display: flex;
+    }
+
+    .zadanie-card {
+      width: min(92vw, 560px);
+      border-radius: 16px;
+      border: 1px solid rgba(212, 175, 55, 0.8);
+      background: linear-gradient(180deg, rgba(30, 14, 70, 0.98), rgba(15, 7, 44, 0.98));
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(255, 220, 125, 0.2) inset;
+      padding: 18px 18px 16px;
+      color: #f5e1a5;
+      font-family: Arial, sans-serif;
+    }
+
+    .zadanie-title {
+      margin: 0 0 10px;
+      font: 700 18px/1.3 Arial, sans-serif;
+      color: #ffd979;
+    }
+
+    .zadanie-content {
+      margin: 0;
+      font: 700 16px/1.5 Arial, sans-serif;
+      color: #fff1ca;
+      white-space: pre-line;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      border: 1px dashed rgba(212, 175, 55, 0.4);
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .zadanie-actions {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .zadanie-close {
+      border: 1px solid #f0c65a;
+      border-radius: 9px;
+      padding: 8px 12px;
+      font: 700 13px Arial, sans-serif;
+      color: #fff4cf;
+      background: linear-gradient(180deg, #9b2f2f 0%, #681b1b 100%);
+      cursor: pointer;
+    }
+
+    .onew-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(5, 13, 32, 0.62);
+      backdrop-filter: blur(2px);
+    }
+
+    .onew-overlay.visible {
+      display: flex;
+    }
+
+    .onew-card {
+      width: min(92vw, 620px);
+      border-radius: 12px;
+      border: 1px solid #ffd04f;
+      background: radial-gradient(circle at top, #14213d 0%, #000000 100%);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      color: #e5e5e5;
+      font-family: inherit;
+      text-align: center;
+    }
+
+    .onew-title {
+      margin: 0 0 20px;
+      font: 400 22px/1.3 Georgia, "Times New Roman", serif;
+      color: #ffd04f;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .onew-wheel-wrap {
+      position: relative;
+      width: 330px;
+      height: 330px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #b8860b 0%, #ffd700 50%, #8b6508 100%);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), inset 0 2px 5px rgba(255, 255, 255, 0.4);
+      padding: 6px;
+    }
+
+    .onew-wheel-wrap::after {
+      content: '1w';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 60px;
+      height: 60px;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(180deg, #1c2331 0%, #0b0e14 100%);
+      border-radius: 50%;
+      border: 2px solid #ffd04f;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.1);
+      z-index: 5;
+      color: #ffffff;
+      font: 700 24px/56px Arial, sans-serif;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+
+    .onew-pointer {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      width: 24px;
+      height: 36px;
+      transform: translateX(-50%);
+      background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%);
+      clip-path: polygon(50% 100%, 0 0, 100% 0);
+      z-index: 6;
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+    }
+
+    .onew-pointer::after {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      background: linear-gradient(180deg, #ffea8c 0%, #d4931a 100%);
+      clip-path: polygon(50% 100%, 0 0, 100% 0);
+    }
+
+    .onew-wheel {
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      border: 1px solid #3a2b0b;
+      background: conic-gradient(#b8860b 0deg 1deg, #0e1726 1deg 39deg, #b8860b 39deg 40deg,
+          #b8860b 40deg 41deg, #16243d 41deg 79deg, #b8860b 79deg 80deg,
+          #b8860b 80deg 81deg, #0e1726 81deg 119deg, #b8860b 119deg 120deg,
+          #b8860b 120deg 121deg, #16243d 121deg 159deg, #b8860b 159deg 160deg,
+          #b8860b 160deg 161deg, #0e1726 161deg 199deg, #b8860b 199deg 200deg,
+          #b8860b 200deg 201deg, #16243d 201deg 239deg, #b8860b 239deg 240deg,
+          #b8860b 240deg 241deg, #0e1726 241deg 279deg, #b8860b 279deg 280deg,
+          #b8860b 280deg 281deg, #16243d 281deg 319deg, #b8860b 319deg 320deg,
+          #b8860b 320deg 321deg, #0e1726 321deg 359deg, #b8860b 359deg 360deg);
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
+      transform: rotate(0deg);
+      transition: transform 6s cubic-bezier(0.05, 0.95, 0.1, 1);
+      overflow: hidden;
+    }
+
+    .onew-label {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform-origin: 0 0;
+      color: #e5e5e5;
+      font: 400 11px/1 Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      white-space: nowrap;
+      pointer-events: none;
+      max-width: 130px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      z-index: 2;
+      text-shadow: 0 1px 2px #000;
+    }
+
+    .onew-slot {
+      margin-top: 10px;
+      padding: 0;
+      color: #ffd04f;
+      font: 400 18px/1.4 Georgia, "Times New Roman", serif;
+      word-break: break-word;
+      min-height: 26px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: none;
+    }
+
+    .onew-price {
+      margin-top: 8px;
+      color: #ffffff;
+      font: 700 24px/1.2 Arial, sans-serif;
+      display: none;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .onew-actions {
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .onew-spin,
+    .onew-close {
+      border: 1px solid #ffd04f;
+      border-radius: 6px;
+      padding: 12px 32px;
+      font: 400 14px "Helvetica Neue", Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #ffd04f;
+      background: transparent;
+      cursor: pointer;
+      transition: all 200ms ease;
+    }
+
+    .onew-spin:hover,
+    .onew-close:hover {
+      background: rgba(255, 208, 79, 0.1);
+      box-shadow: 0 0 10px rgba(255, 208, 79, 0.2);
+    }
+
+    .onew-spin:active,
+    .onew-close:active {
+      transform: scale(0.98);
+      background: rgba(255, 208, 79, 0.2);
+    }
+
+    .dog-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(25, 5, 5, 0.75);
+      backdrop-filter: blur(2px);
+    }
+
+    .dog-overlay.visible {
+      display: flex;
+    }
+
+    .dog-card {
+      width: min(92vw, 680px);
+      border-radius: 12px;
+      border: 1px solid #c0392b;
+      background: radial-gradient(circle at top, #3b0a0a 0%, #0f0000 100%);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 100, 100, 0.15), 0 0 40px rgba(192, 57, 43, 0.3);
+      padding: 30px;
+      color: #f0d0d0;
+      font-family: inherit;
+      text-align: center;
+    }
+
+    .dog-title {
+      margin: 0 0 20px;
+      font: 400 22px/1.3 Georgia, "Times New Roman", serif;
+      color: #e74c3c;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-shadow: 0 0 15px rgba(231, 76, 60, 0.6);
+    }
+
+    .dog-wheel-wrap {
+      position: relative;
+      width: 330px;
+      height: 330px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7b1a1a 0%, #c0392b 50%, #5a0f0f 100%);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), inset 0 2px 5px rgba(255, 150, 150, 0.3), 0 0 25px rgba(192, 57, 43, 0.4);
+      padding: 6px;
+    }
+
+    .dog-wheel-wrap::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 60px;
+      height: 60px;
+      transform: translate(-50%, -50%);
+      background: #1a0000;
+      border-radius: 50%;
+      border: 2px solid #e74c3c;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), inset 0 2px 4px rgba(255, 100, 100, 0.2), 0 0 10px rgba(231, 76, 60, 0.5);
+      z-index: 5;
+    }
+
+    .dog-pointer {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      width: 24px;
+      height: 36px;
+      transform: translateX(-50%);
+      background: linear-gradient(180deg, #e74c3c 0%, #7b1a1a 100%);
+      clip-path: polygon(50% 100%, 0 0, 100% 0);
+      z-index: 6;
+      filter: drop-shadow(0 4px 6px rgba(231, 76, 60, 0.6));
+    }
+
+    .dog-pointer::after {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      background: linear-gradient(180deg, #ff8c7a 0%, #c0392b 100%);
+      clip-path: polygon(50% 100%, 0 0, 100% 0);
+    }
+
+    .dog-wheel {
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      border: 1px solid #5a0f0f;
+      background: conic-gradient(#7b1a1a 0deg 1deg, #200000 1deg 51deg, #7b1a1a 51deg 52deg,
+          #7b1a1a 52deg 53deg, #2e0000 53deg 103deg, #7b1a1a 103deg 104deg,
+          #7b1a1a 104deg 105deg, #200000 105deg 155deg, #7b1a1a 155deg 156deg,
+          #7b1a1a 156deg 157deg, #2e0000 157deg 207deg, #7b1a1a 207deg 208deg,
+          #7b1a1a 208deg 209deg, #200000 209deg 259deg, #7b1a1a 259deg 260deg,
+          #7b1a1a 260deg 261deg, #2e0000 261deg 311deg, #7b1a1a 311deg 312deg,
+          #7b1a1a 312deg 313deg, #200000 313deg 359deg, #7b1a1a 359deg 360deg);
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9);
+      transform: rotate(0deg);
+      transition: transform 6s cubic-bezier(0.05, 0.95, 0.1, 1);
+      overflow: hidden;
+    }
+
+    .dog-label {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform-origin: 0 0;
+      color: #ffb0a0;
+      font: 400 10px/1 Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      pointer-events: none;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      z-index: 2;
+      text-shadow: 0 1px 2px #000;
+    }
+
+    .dog-slot {
+      margin-top: 10px;
+      padding: 0;
+      color: #e74c3c;
+      font: 400 18px/1.4 Georgia, "Times New Roman", serif;
+      word-break: break-word;
+      min-height: 26px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: none;
+      text-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+    }
+
+    .dog-price {
+      margin-top: 8px;
+      color: #ffffff;
+      font: 700 24px/1.2 Arial, sans-serif;
+      display: none;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .dog-actions {
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .dog-spin,
+    .dog-close {
+      border: 1px solid #e74c3c;
+      border-radius: 6px;
+      padding: 12px 32px;
+      font: 400 14px "Helvetica Neue", Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #e74c3c;
+      background: transparent;
+      cursor: pointer;
+      transition: all 200ms ease;
+    }
+
+    .dog-spin:hover,
+    .dog-close:hover {
+      background: rgba(231, 76, 60, 0.15);
+      box-shadow: 0 0 15px rgba(231, 76, 60, 0.3);
+    }
+
+    .dog-spin:active,
+    .dog-close:active {
+      transform: scale(0.98);
+      background: rgba(231, 76, 60, 0.25);
+    }
+
+    .fish-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(4, 18, 25, 0.7);
+      backdrop-filter: blur(2px);
+    }
+
+    .fish-overlay.visible {
+      display: flex;
+    }
+
+    .fish-card {
+      width: min(92vw, 680px);
+      border-radius: 12px;
+      border: 1px solid #ffd04f;
+      background: radial-gradient(circle at top, #062f3a 0%, #000c0f 100%);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      color: #e5e5e5;
+      font-family: inherit;
+      text-align: center;
+    }
+
+    .fish-title {
+      margin: 0 0 20px;
+      font: 400 22px/1.3 Georgia, "Times New Roman", serif;
+      color: #ffd04f;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .fish-wheel-wrap {
+      position: relative;
+      width: 480px;
+      height: 480px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #b8860b 0%, #ffd700 50%, #8b6508 100%);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), inset 0 2px 5px rgba(255, 255, 255, 0.4);
+      padding: 6px;
+    }
+
+    .fish-wheel-wrap::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 96px;
+      height: 96px;
+      transform: translate(-50%, -50%);
+      background: #021a22;
+      border-radius: 50%;
+      border: 2px solid #ffd04f;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.1);
+      z-index: 5;
+    }
+
+    .fish-pointer {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      width: 32px;
+      height: 48px;
+      transform: translateX(-50%);
+      background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%);
+      clip-path: polygon(50% 100%, 0 0, 100% 0);
+      z-index: 6;
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+    }
+
+    .fish-pointer::after {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      background: linear-gradient(180deg, #ffea8c 0%, #d4931a 100%);
+      clip-path: polygon(50% 100%, 0 0, 100% 0);
+    }
+
+    .fish-wheel {
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      border: 1px solid #3a2b0b;
+      background: repeating-conic-gradient(from 0deg,
+          #ffd04f 0deg 1deg, #053b49 1deg 14deg,
+          #ffd04f 14deg 16deg, #096179 16deg 29deg,
+          #ffd04f 29deg 30deg);
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
+      transform: rotate(0deg);
+      transition: transform 6s cubic-bezier(0.05, 0.95, 0.1, 1);
+      overflow: hidden;
+    }
+
+    .fish-label {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform-origin: 0 0;
+      color: #fff;
+      font: 700 11px/1.2 Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: normal;
+      pointer-events: none;
+      max-width: 175px;
+      font-weight: bold;
+      z-index: 2;
+      text-shadow: 0 1px 2px #000;
+    }
+
+    .fish-slot {
+      margin-top: 10px;
+      padding: 0;
+      color: #ffd04f;
+      font: 400 18px/1.4 Georgia, "Times New Roman", serif;
+      word-break: break-word;
+      min-height: 26px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: none;
+    }
+
+    .fish-price {
+      margin-top: 8px;
+      color: #ffffff;
+      font: 700 24px/1.2 Arial, sans-serif;
+      display: none;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .fish-actions {
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .fish-spin,
+    .fish-close {
+      border: 1px solid #ffd04f;
+      border-radius: 6px;
+      padding: 12px 32px;
+      font: 400 14px "Helvetica Neue", Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #ffd04f;
+      background: transparent;
+      cursor: pointer;
+      transition: all 200ms ease;
+    }
+
+    .fish-spin:hover,
+    .fish-close:hover {
+      background: rgba(255, 208, 79, 0.1);
+      box-shadow: 0 0 10px rgba(255, 208, 79, 0.2);
+    }
+
+    .fish-spin:active,
+    .fish-close:active {
+      transform: scale(0.98);
+      background: rgba(255, 208, 79, 0.2);
+    }
+
+    /* === SPEECH BUBBLE (gens) === */
+    .gens-bubble {
+      position: absolute;
+      display: none;
+      background: rgba(255, 248, 220, 0.97);
+      color: #3a2000;
+      font: 400 11px/1.5 Georgia, serif;
+      border-radius: 14px;
+      border: 2px solid #c8902a;
+      padding: 10px 14px;
+      max-width: 210px;
+      white-space: pre-line;
+      text-align: left;
+      z-index: 3000;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+      pointer-events: none;
+      transform: translate(calc(-15% + 5px), calc(-140% - 6px));
+      animation: bubblePop 0.25s ease;
+    }
+
+    .gens-bubble.visible {
+      display: block;
+    }
+
+    .gens-bubble-name {
+      display: block;
+      font: 700 12px/1.4 Georgia, serif;
+      color: #8b4500;
+      margin-bottom: 5px;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(200, 144, 42, 0.4);
+      padding-bottom: 4px;
+    }
+
+    /* tail pointing down-left */
+    .gens-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -12px;
+      left: 18px;
+      transform: none;
+      border: 6px solid transparent;
+      border-top-color: #c8902a;
+    }
+
+    .gens-bubble::before {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 19px;
+      transform: none;
+      border: 5px solid transparent;
+      border-top-color: rgba(255, 248, 220, 0.97);
+      z-index: 1;
+    }
+
+    @keyframes bubblePop {
+      from {
+        opacity: 0;
+        transform: translate(calc(-15% + 5px), calc(-150% - 6px)) scale(0.85);
+      }
+
+      to {
+        opacity: 1;
+        transform: translate(calc(-15% + 5px), calc(-140% - 6px)) scale(1);
+      }
+    }
+
+    /* === SPEECH BUBBLE (zloy) === */
+    .zloy-bubble {
+      position: absolute;
+      display: none;
+      background: rgba(40, 45, 60, 0.97);
+      color: #e0e6ed;
+      font: 400 11px/1.5 Georgia, serif;
+      border-radius: 14px;
+      border: 2px solid #5a82cc;
+      padding: 10px 14px;
+      max-width: 210px;
+      white-space: pre-line;
+      text-align: left;
+      z-index: 3000;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+      pointer-events: none;
+      transform: translate(-50%, -140%);
+      animation: bubblePopZloy 0.25s ease;
+    }
+
+    .zloy-bubble.visible {
+      display: block;
+    }
+
+    .zloy-bubble-name {
+      display: block;
+      font: 700 12px/1.4 Georgia, serif;
+      color: #8bb4ff;
+      margin-bottom: 5px;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(90, 130, 204, 0.4);
+      padding-bottom: 4px;
+    }
+
+    /* tail pointing down */
+    .zloy-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: #5a82cc;
+    }
+
+    .zloy-bubble::before {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: rgba(40, 45, 60, 0.97);
+      z-index: 1;
+    }
+
+    @keyframes bubblePopZloy {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -150%) scale(0.85);
+      }
+
+      to {
+        opacity: 1;
+        transform: translate(-50%, -140%) scale(1);
+      }
+    }
+
+    /* === SPEECH BUBBLE (skilz) === */
+    .skilz-bubble {
+      position: absolute;
+      display: none;
+      background: rgba(45, 35, 25, 0.97);
+      color: #f7eed7;
+      font: 400 11px/1.5 Georgia, serif;
+      border-radius: 14px;
+      border: 2px solid #c2a15f;
+      padding: 10px 14px;
+      max-width: 250px;
+      white-space: pre-line;
+      text-align: left;
+      z-index: 3000;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.6);
+      pointer-events: none;
+      transform: translate(-50%, -130%);
+      animation: bubblePopSkilz 0.25s ease;
+    }
+
+    .skilz-bubble.visible {
+      display: block;
+    }
+
+    .skilz-bubble-name {
+      display: block;
+      font: 700 12px/1.4 Georgia, serif;
+      color: #e5c37e;
+      margin-bottom: 5px;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(194, 161, 95, 0.4);
+      padding-bottom: 4px;
+    }
+
+    .skilz-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: #c2a15f;
+    }
+
+    .skilz-bubble::before {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: rgba(45, 35, 25, 0.97);
+      z-index: 1;
+    }
+
+    @keyframes bubblePopSkilz {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -140%) scale(0.85);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -130%) scale(1);
+      }
+    }
+
+    /* === SPEECH BUBBLE (mokr) === */
+    .mokr-bubble {
+      position: absolute;
+      display: none;
+      background: rgba(26, 40, 26, 0.97);
+      color: #e6fced;
+      font: 400 9px/1.3 Georgia, serif;
+      border-radius: 14px;
+      border: 2px solid #5abf73;
+      padding: 6px 8px;
+      max-width: 165px;
+      white-space: pre-line;
+      text-align: left;
+      z-index: 3000;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.6);
+      pointer-events: none;
+      transform: translate(15%, -130%);
+      animation: bubblePopMokr 0.25s ease;
+    }
+
+    .mokr-bubble.visible {
+      display: block;
+    }
+
+    .mokr-bubble-name {
+      display: block;
+      font: 700 10px/1.3 Georgia, serif;
+      color: #7eea9a;
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(90, 191, 115, 0.4);
+      padding-bottom: 3px;
+    }
+
+    .mokr-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -12px;
+      left: 12px;
+      transform: none;
+      border: 6px solid transparent;
+      border-top-color: #5abf73;
+    }
+
+    .mokr-bubble::before {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 13px;
+      transform: none;
+      border: 5px solid transparent;
+      border-top-color: rgba(26, 40, 26, 0.97);
+      z-index: 1;
+    }
+
+    @keyframes bubblePopMokr {
+      from {
+        opacity: 0;
+        transform: translate(25%, -140%) scale(0.85);
+      }
+      to {
+        opacity: 1;
+        transform: translate(25%, -130%) scale(1);
+      }
+    }
+
+    /* === TIME OVERLAY === */
+    .svitok-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 5, 2, 0.7);
+      backdrop-filter: blur(2px);
+      transition: background 0.3s;
+    }
+    
+    .svitok-overlay.finish-darkness {
+      background: rgba(0, 0, 0, 0.88);
+    }
+
+    .svitok-text.finish-text {
+      font-size: clamp(9px, 0.9vw, 13px) !important;
+      line-height: 1.15;
+      padding-top: 15px;
+    }
+
+    .time-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(20, 20, 25, 0.85);
+      backdrop-filter: blur(3px);
+    }
+
+    .time-overlay.visible {
+      display: flex;
+    }
+
+    .time-card {
+      width: min(92vw, 420px);
+      border-radius: 12px;
+      background: linear-gradient(135deg, #2a2a35 0%, #15151a 100%);
+      border: 2px solid #5a82cc;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), inset 0 2px 5px rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      padding: 24px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: inherit;
+      text-align: center;
+    }
+
+    .time-title {
+      margin: 0 0 15px;
+      font: 400 22px/1.3 Georgia, "Times New Roman", serif;
+      color: #8bb4ff;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .time-task {
+      margin: 0 0 15px;
+      font: 400 16px/1.5 Arial, sans-serif;
+      color: #e0e6ed;
+    }
+
+    .time-timer-display {
+      font: 700 48px/1 Arial, sans-serif;
+      color: #ff5e5e;
+      margin: 10px 0 20px;
+      text-shadow: 0 0 15px rgba(255, 94, 94, 0.4);
+    }
+    
+    .time-result-msg {
+      font: 700 18px/1.4 Arial, sans-serif;
+      color: #ffd04f;
+      margin: 10px 0 20px;
+      display: none;
+    }
+
+    .time-actions {
+      display: flex;
+      gap: 16px;
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .time-btn {
+      min-width: 120px;
+      padding: 12px 20px;
+      font: 700 15px/1 Arial, sans-serif;
+      color: #fff;
+      border: 1px solid #5a82cc;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #3a5799 0%, #1c2e55 100%);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: none;
+    }
+
+    .time-btn:hover {
+      background: linear-gradient(180deg, #4b6ebc 0%, #253d70 100%);
+      transform: translateY(-1px);
+    }
+
+    .time-btn:active {
+      transform: scale(0.98);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+
+<body>
+  <aside class="tool-panel" id="tool-panel">
+    <div class="row" style="justify-content: space-between;">
+      <div class="title">Редактор Клеток</div>
+      <button id="hide-tools" type="button">Скрыть</button>
+    </div>
+    <div class="row">
+      <select id="cell-select" style="min-width: 200px;"></select>
+    </div>
+    <div class="row">
+      <label>X <input id="cell-x" type="number" /></label>
+      <label>Y <input id="cell-y" type="number" /></label>
+      <label>Шаг <input id="cell-step" type="number" value="5" /></label>
+    </div>
+    <div class="row">
+      <div class="move-grid">
+        <span></span><button data-move="up" type="button">↑</button><span></span>
+        <button data-move="left" type="button">←</button><span></span><button data-move="right" type="button">→</button>
+        <span></span><button data-move="down" type="button">↓</button><span></span>
+      </div>
+      <button id="apply-xy" type="button">Применить XY</button>
+    </div>
+    <div class="row">
+      <label>Scale <input id="cell-scale" type="number" step="0.0001" /></label>
+      <label>Rz <input id="cell-rz" type="number" step="1" /></label>
+      <button id="apply-sr" type="button">Применить</button>
+    </div>
+    <div class="row">
+      <button id="copy-one" type="button">Копировать выбранную</button>
+      <button id="copy-all-cells" type="button">Копировать все</button>
+    </div>
+    <div class="row">
+      <button id="delete-cell" type="button">Удалить выбранную</button>
+    </div>
+    <div class="row">
+      <select id="new-cell-asset" style="min-width: 140px;"></select>
+      <button id="add-cell" type="button">Добавить клетку</button>
+    </div>
+    <div id="tool-status" style="font-size:12px; opacity:0.9;"></div>
+  </aside>
+  <button class="tool-show" id="show-tools" type="button">Панель</button>
+
+  <div class="container">
+    <div class="bg-webgl" id="bg-webgl"></div>
+    <img class="placed-sprite" data-id="spr1" src="zloy.png" alt=""
+      style="left: 956px; top: 181px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.096); z-index: 0;" />
+    <img class="placed-sprite" data-id="spr2" src="skilz.png" alt=""
+      style="left: 144px; top: 523px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.096); z-index: 1;" />
+    <img class="placed-sprite" data-id="spr3" src="mokr.png" alt=""
+      style="left: 175px; top: 152px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.1); z-index: 2;" />
+    <img class="placed-sprite" data-id="spr4" src="gens.png" alt=""
+      style="left: 941px; top: 528px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.0953); z-index: 3;" />
+    <img class="placed-sprite" data-id="spr5" src="srart.png" alt=""
+      style="left: 1044px; top: 622px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.063); z-index: 4;" />
+    <img class="placed-sprite" data-id="spr6" src="bonus.png" alt=""
+      style="left: 997px; top: 615px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.063); z-index: 5;" />
+    <img class="placed-sprite" data-id="spr7" src="gift.png" alt=""
+      style="left: 955px; top: 604px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.0583); z-index: 6;" />
+    <img class="placed-sprite" data-id="spr8" src="portal.png" alt=""
+      style="left: 914px; top: 591px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.056); z-index: 7;" />
+    <img class="placed-sprite" data-id="spr9" src="portal.png" alt=""
+      style="left: 884px; top: 474px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.054); z-index: 8;" />
+    <img class="placed-sprite" data-id="spr10" src="1w.png" alt=""
+      style="left: 919px; top: 453px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.05); z-index: 9;" />
+    <img class="placed-sprite" data-id="spr11" src="fish.png" alt=""
+      style="left: 960px; top: 442px; transform: translate(-50%, -50%) rotateX(37deg) rotateY(0deg) rotateZ(0deg) scale(0.048); z-index: 10;" />
+    <img class="placed-sprite" data-id="spr12" src="zadanie.png" alt=""
+      style="left: 997px; top: 435px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.052); z-index: 11;" />
+    <img class="placed-sprite" data-id="spr13" src="gift.png" alt=""
+      style="left: 1034px; top: 426px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.054); z-index: 12;" />
+    <img class="placed-sprite" data-id="spr14" src="dead.png" alt=""
+      style="left: 1052px; top: 399px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.05); z-index: 13;" />
+    <img class="placed-sprite" data-id="spr15" src="bonus.png" alt=""
+      style="left: 1017px; top: 386px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.055); z-index: 14;" />
+    <img class="placed-sprite" data-id="spr16" src="bonus.png" alt=""
+      style="left: 977px; top: 379px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.054); z-index: 15;" />
+    <img class="placed-sprite" data-id="spr17" src="1w.png" alt=""
+      style="left: 995px; top: 350px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.051); z-index: 16;" />
+    <img class="placed-sprite" data-id="spr18" src="zadanie.png" alt=""
+      style="left: 999px; top: 324px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.051); z-index: 17;" />
+    <img class="placed-sprite" data-id="spr19" src="fish.png" alt=""
+      style="left: 963px; top: 308px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.042); z-index: 18;" />
+    <img class="placed-sprite" data-id="spr20" src="bonus.png" alt=""
+      style="left: 928px; top: 293px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.053); z-index: 19;" />
+    <img class="placed-sprite" data-id="spr21" src="bonus.png" alt=""
+      style="left: 902px; top: 270px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.053); z-index: 20;" />
+    <img class="placed-sprite" data-id="spr22" src="save.png" alt=""
+      style="left: 917px; top: 233px; transform: translate(-50%, -50%) rotateX(37deg) rotateY(0deg) rotateZ(0deg) scale(0.054); z-index: 21;" />
+    <img class="placed-sprite" data-id="spr23" src="gift.png" alt=""
+      style="left: 885px; top: 221px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.052); z-index: 22;" />
+    <img class="placed-sprite" data-id="spr24" src="zadanie.png" alt=""
+      style="left: 846px; top: 226px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.05); z-index: 24;" />
+    <img class="placed-sprite" data-id="spr25" src="1w.png" alt=""
+      style="left: 804px; top: 216px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.053); z-index: 25;" />
+    <img class="placed-sprite" data-id="spr26" src="bonus.png" alt=""
+      style="left: 763px; top: 213px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.053); z-index: 27;" />
+    <img class="placed-sprite" data-id="spr27" src="bonus.png" alt=""
+      style="left: 727px; top: 206px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.053); z-index: 28;" />
+    <img class="placed-sprite" data-id="spr28" src="zadanie.png" alt=""
+      style="left: 694px; top: 196px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.043); z-index: 29;" />
+    <img class="placed-sprite" data-id="spr29" src="1w.png" alt=""
+      style="left: 661px; top: 181px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.044); z-index: 30;" />
+    <img class="placed-sprite" data-id="spr30" src="gift.png" alt=""
+      style="left: 631px; top: 170px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.046); z-index: 31;" />
+    <img class="placed-sprite" data-id="spr31" src="bonus.png" alt=""
+      style="left: 597px; top: 161px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.053); z-index: 32;" />
+    <img class="placed-sprite" data-id="spr32" src="bonus.png" alt=""
+      style="left: 560px; top: 153px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.053); z-index: 33;" />
+    <img class="placed-sprite" data-id="spr33" src="fish.png" alt=""
+      style="left: 524px; top: 145px; transform: translate(-50%, -50%) rotateX(33deg) rotateY(0deg) rotateZ(0deg) scale(0.04); z-index: 34;" />
+    <img class="placed-sprite" data-id="spr34" src="zadanie.png" alt=""
+      style="left: 487px; top: 152px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.048); z-index: 35;" />
+    <img class="placed-sprite" data-id="spr35" src="dead.png" alt=""
+      style="left: 450px; top: 149px; transform: translate(-50%, -50%) rotateX(28deg) rotateY(0deg) rotateZ(0deg) scale(0.05); z-index: 36;" />
+    <img class="placed-sprite" data-id="spr36" src="bonus.png" alt=""
+      style="left: 414px; top: 155px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.053); z-index: 37;" />
+    <img class="placed-sprite" data-id="spr37" src="zadanie.png" alt=""
+      style="left: 376px; top: 162px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.05); z-index: 38;" />
+    <img class="placed-sprite" data-id="spr38" src="bonus.png" alt=""
+      style="left: 337px; top: 166px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.056); z-index: 39;" />
+    <img class="placed-sprite" data-id="spr39" src="gift.png" alt=""
+      style="left: 310px; top: 187px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.053); z-index: 40;" />
+    <img class="placed-sprite" data-id="spr40" src="1w.png" alt=""
+      style="left: 272px; top: 197px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.056); z-index: 41;" />
+    <img class="placed-sprite" data-id="spr41" src="time.png" alt=""
+      style="left: 233px; top: 211px; transform: translate(-50%, -50%) rotateX(30deg) rotateY(0deg) rotateZ(0deg) scale(0.058); z-index: 42;" />
+    <img class="placed-sprite" data-id="spr42" src="bonus.png" alt=""
+      style="left: 264px; top: 241px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.059); z-index: 44;" />
+    <img class="placed-sprite" data-id="spr43" src="bonus.png" alt=""
+      style="left: 291px; top: 265px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.059); z-index: 45;" />
+    <img class="placed-sprite" data-id="spr44" src="zadanie.png" alt=""
+      style="left: 328px; top: 266px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.051); z-index: 46;" />
+    <img class="placed-sprite" data-id="spr45" src="zadanie.png" alt=""
+      style="left: 366px; top: 268px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.051); z-index: 47;" />
+    <img class="placed-sprite" data-id="spr46" src="gift.png" alt=""
+      style="left: 398px; top: 287px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.053); z-index: 48;" />
+    <img class="placed-sprite" data-id="spr47" src="1w.png" alt=""
+      style="left: 360px; top: 295px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.052); z-index: 49;" />
+    <img class="placed-sprite" data-id="spr48" src="bonus.png" alt=""
+      style="left: 322px; top: 316px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.062); z-index: 50;" />
+    <img class="placed-sprite" data-id="spr49" src="bonus.png" alt=""
+      style="left: 362px; top: 330px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.062); z-index: 51;" />
+    <img class="placed-sprite" data-id="spr50" src="fish.png" alt=""
+      style="left: 398px; top: 347px; transform: translate(-50%, -50%) rotateX(32deg) rotateY(0deg) rotateZ(0deg) scale(0.047); z-index: 52;" />
+    <img class="placed-sprite" data-id="spr51" src="gift.png" alt=""
+      style="left: 358px; top: 369px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.06); z-index: 53;" />
+    <img class="placed-sprite" data-id="spr52" src="zadanie.png" alt=""
+      style="left: 313px; top: 376px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.056); z-index: 54;" />
+    <img class="placed-sprite" data-id="spr53" src="dead.png" alt=""
+      style="left: 271px; top: 376px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.055); z-index: 55;" />
+    <img class="placed-sprite" data-id="spr54" src="bonus.png" alt=""
+      style="left: 228px; top: 382px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.063); z-index: 56;" />
+    <img class="placed-sprite" data-id="spr55" src="bonus.png" alt=""
+      style="left: 199px; top: 407px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.063); z-index: 57;" />
+    <img class="placed-sprite" data-id="spr56" src="zadanie.png" alt=""
+      style="left: 236px; top: 426px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.056); z-index: 58;" />
+    <img class="placed-sprite" data-id="spr57" src="bonus.png" alt=""
+      style="left: 270px; top: 449px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.063); z-index: 59;" />
+    <img class="placed-sprite" data-id="spr58" src="bonus.png" alt=""
+      style="left: 307px; top: 467px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.063); z-index: 60;" />
+    <img class="placed-sprite" data-id="spr59" src="gift.png" alt=""
+      style="left: 348px; top: 481px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.06); z-index: 61;" />
+    <img class="placed-sprite" data-id="spr60" src="1w.png" alt=""
+      style="left: 395px; top: 487px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.06); z-index: 62;" />
+    <img class="placed-sprite" data-id="spr61" src="bonus.png" alt=""
+      style="left: 443px; top: 501px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.063); z-index: 63;" />
+    <img class="placed-sprite" data-id="spr62" src="zadanie.png" alt=""
+      style="left: 485px; top: 511px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.056); z-index: 64;" />
+    <img class="placed-sprite" data-id="spr63" src="fish.png" alt=""
+      style="left: 526px; top: 523px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.047); z-index: 65;" />
+    <img class="placed-sprite" data-id="spr64" src="bonus.png" alt=""
+      style="left: 545px; top: 555px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.062); z-index: 66;" />
+    <img class="placed-sprite" data-id="spr65" src="bonus.png" alt=""
+      style="left: 533px; top: 587px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.063); z-index: 67;" />
+    <img class="placed-sprite" data-id="spr66" src="gift.png" alt=""
+      style="left: 488px; top: 592px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.06); z-index: 68;" />
+    <img class="placed-sprite" data-id="spr67" src="bonus.png" alt=""
+      style="left: 445px; top: 577px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.063); z-index: 69;" />
+    <img class="placed-sprite" data-id="spr68" src="zadanie.png" alt=""
+      style="left: 405px; top: 562px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.056); z-index: 70;" />
+    <img class="placed-sprite" data-id="spr69" src="bonus.png" alt=""
+      style="left: 368px; top: 579px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.063); z-index: 71;" />
+    <img class="placed-sprite" data-id="spr70" src="bonus.png" alt=""
+      style="left: 362px; top: 610px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.063); z-index: 72;" />
+    <img class="placed-sprite" data-id="spr71" src="1w.png" alt=""
+      style="left: 354px; top: 637px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.06); z-index: 73;" />
+    <img class="placed-sprite" data-id="spr72" src="bonus.png" alt=""
+      style="left: 308px; top: 646px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.063); z-index: 74;" />
+    <img class="placed-sprite" data-id="spr73" src="zadanie.png" alt=""
+      style="left: 264px; top: 643px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.056); z-index: 75;" />
+    <img class="placed-sprite" data-id="spr74" src="gift.png" alt=""
+      style="left: 222px; top: 631px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.06); z-index: 76;" />
+    <img class="placed-sprite" data-id="spr75" src="dog.png" alt=""
+      style="left: 212px; top: 589px; transform: translate(-50%, -50%) rotateX(26deg) rotateY(0deg) rotateZ(0deg) scale(0.06); z-index: 77;" />
+    <img class="placed-sprite" data-id="spr76" src="finish.png" alt=""
+      style="left: 246px; top: 560px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.088); z-index: 78;" />
+    <img class="placed-sprite" data-id="spr77" src="doghouse.png" alt=""
+      style="left: 304px; top: 512px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.088); z-index: 79;" />
+    <img class="placed-sprite" data-id="spr78" src="island.png" alt=""
+      style="left: 606px; top: 380px; transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.2095); z-index: 80;" />
+    <div class="dice-view" id="dice-view"></div>
+    <div class="chip-view" id="chip-view"></div>
+    <div class="controls">
+      <button id="roll-btn" type="button">Кинуть</button>
+      <span id="roll-result">Выпало: -</span>
+    </div>
+
+
+    <div class="dog-overlay" id="dog-overlay">
+      <div class="dog-card">
+        <h3 class="dog-title">🐾 The Dog House</h3>
+        <div class="dog-wheel-wrap">
+          <div class="dog-pointer"></div>
+          <div class="dog-wheel" id="dog-wheel"></div>
+        </div>
+        <div class="dog-slot" id="dog-slot-name"></div>
+        <div class="dog-price" id="dog-price"></div>
+        <div class="dog-actions">
+          <button class="dog-spin" id="dog-spin" type="button">Крутить</button>
+          <button class="dog-close" id="dog-close" type="button" style="display:none;">Закрыть</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="svitok-overlay" id="svitok-overlay">
+      <div class="svitok-card">
+        <button class="svitok-close" id="svitok-close" type="button">Закрыть</button>
+        <p class="svitok-text" id="svitok-text">На остров тайный, в час ночной,
+          Пришёл герой наш озорной,
+          Где шепчет ветер у костра,
+          Что началась давно игра.
+
+          Где клетки светятся во мгле,
+          Как звёзды где-то вдалеке,
+          И каждый ход, и каждый знак
+          Решают, будет фарт иль мрак.
+
+          Здесь ждут загадки, смех и бой,
+          И путь не будет уж простой,
+          Но если сердце горячо —
+          То и занос придёт ещё.
+
+          Эвелон, вперёд иди,
+          Золотую кость найди,
+          Пусть тебе морской прибой
+          Путь укажет за мечтой.</p>
+      </div>
+      <img src="kost.png" id="svitok-kost" style="display: none; height: 350px; margin-left: -30px; filter: drop-shadow(0 0 15px rgba(255,200,50,0.5)); z-index: 10;" alt="Kost" />
+    </div>
+
+    <div class="bonus-overlay" id="bonus-overlay">
+      <div class="bonus-card">
+        <h3 class="bonus-title">Бонус клетка</h3>
+        <p class="bonus-task">купи бонус:</p>
+        <div class="bonus-slot" id="bonus-slot-name"></div>
+        <div class="bonus-actions">
+          <button class="bonus-close" id="bonus-close" type="button">Понятно</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="gift-overlay" id="gift-overlay">
+      <div class="gift-card">
+        <h3 class="gift-title">Gift клетка</h3>
+        <p class="gift-task">Розыгрыш чату</p>
+        <div class="bonus-slot">Сумма: 500$</div>
+        <div class="gift-actions">
+          <button class="gift-close" id="gift-close" type="button">Понятно</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="dead-overlay" id="dead-overlay">
+      <div class="dead-card">
+        <h3 class="dead-title" id="dead-title">Title</h3>
+        <p class="dead-task" id="dead-task">Task</p>
+        <div class="dead-actions">
+          <button class="dead-close" id="dead-close" type="button">Понятно</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="zadanie-overlay" id="zadanie-overlay">
+      <div class="zadanie-card">
+        <h3 class="zadanie-title">Задание</h3>
+        <div class="zadanie-content" id="zadanie-text">
+          Здесь будет текст задания...
+        </div>
+        <div class="zadanie-actions">
+          <button class="zadanie-close" id="zadanie-close" type="button">Понятно</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="onew-overlay" id="onew-overlay">
+      <div class="onew-card">
+        <h3 class="onew-title">1w клетка</h3>
+        <div class="onew-wheel-wrap">
+          <div class="onew-pointer"></div>
+          <div class="onew-wheel" id="onew-wheel"></div>
+        </div>
+        <div class="onew-slot" id="onew-slot-name"></div>
+        <div class="onew-price" id="onew-price">1500$</div>
+        <div class="onew-actions">
+          <button class="onew-spin" id="onew-spin" type="button">Крутить</button>
+          <button class="onew-close" id="onew-close" type="button" style="display:none;">Закрыть</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="fish-overlay" id="fish-overlay">
+      <div class="fish-card">
+        <h3 class="fish-title">Fish клетка</h3>
+        <div class="fish-wheel-wrap">
+          <div class="fish-pointer"></div>
+          <div class="fish-wheel" id="fish-wheel"></div>
+        </div>
+        <div class="fish-slot" id="fish-slot-name"></div>
+        <div class="fish-price" id="fish-price">1500$</div>
+        <div class="fish-actions">
+          <button class="fish-spin" id="fish-spin" type="button">Крутить</button>
+          <button class="fish-close" id="fish-close" type="button" style="display:none;">Закрыть</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="time-overlay" id="time-overlay">
+      <div class="time-card">
+        <h3 class="Time-title">Time Клетка</h3>
+        <p class="time-task" id="time-task-text">Назови 5 фильмов связанные с казино</p>
+        <div class="time-timer-display" id="time-timer-display">10</div>
+        <div class="time-result-msg" id="time-result-msg">Розыгрыш чату 500$</div>
+        <div class="time-actions">
+          <button class="time-btn" id="time-btn-success" type="button">Успел</button>
+          <button class="time-btn" id="time-btn-fail" type="button">Не успел</button>
+          <button class="time-btn" id="time-btn-close" type="button">Закрыть</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script>
+    const host = document.getElementById("dice-view");
+    const chipHost = document.getElementById("chip-view");
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, host.clientWidth / host.clientHeight, 0.1, 10000);
+    camera.position.set(0, 0, 260);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(host.clientWidth, host.clientHeight);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    host.appendChild(renderer.domElement);
+
+    const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambient);
+    const directional = new THREE.DirectionalLight(0xffffff, 1);
+    directional.position.set(120, 200, 100);
+    scene.add(directional);
+    const fill = new THREE.DirectionalLight(0xffffff, 0.6);
+    fill.position.set(-120, -60, 140);
+    scene.add(fill);
+
+    const chipScene = new THREE.Scene();
+    const chipCamera = new THREE.PerspectiveCamera(45, chipHost.clientWidth / chipHost.clientHeight, 0.1, 1000);
+    chipCamera.position.set(0, 0.9, 3);
+    chipCamera.lookAt(0, 0.9, 0);
+    const chipRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    chipRenderer.setPixelRatio(window.devicePixelRatio);
+    chipRenderer.setSize(chipHost.clientWidth, chipHost.clientHeight);
+    chipRenderer.outputEncoding = THREE.sRGBEncoding;
+    chipHost.appendChild(chipRenderer.domElement);
+    const chipAmbient = new THREE.AmbientLight(0xffffff, 0.9);
+    chipScene.add(chipAmbient);
+    const chipDir = new THREE.DirectionalLight(0xffffff, 1.1);
+    chipDir.position.set(2, 3, 4);
+    chipScene.add(chipDir);
+
+    // ── Background video: native WebGL, seamless crossfade loop ──────────────
+    (() => {
+      const bgHost = document.getElementById("bg-webgl");
+
+      const bgCanvas = document.createElement("canvas");
+      bgCanvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block;";
+      bgHost.appendChild(bgCanvas);
+
+      // Fallback: plain looping video shown only if WebGL unavailable
+      const fallbackVid = document.createElement("video");
+      fallbackVid.src = "fone.mp4";
+      fallbackVid.muted = true; fallbackVid.playsInline = true;
+      fallbackVid.autoplay = true; fallbackVid.loop = true; fallbackVid.preload = "auto";
+      fallbackVid.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:fill;opacity:0;pointer-events:none;";
+      bgHost.appendChild(fallbackVid);
+
+      const gl = bgCanvas.getContext("webgl", { premultipliedAlpha: false, antialias: false })
+        || bgCanvas.getContext("experimental-webgl");
+
+      if (!gl) { fallbackVid.style.opacity = "1"; fallbackVid.play().catch(() => { }); return; }
+
+      const mainVideo = document.createElement("video");
+      const blendVideo = document.createElement("video");
+      [mainVideo, blendVideo].forEach(v => {
+        v.src = "fone.mp4"; v.muted = true; v.playsInline = true; v.preload = "auto";
+      });
+
+      // Vertex: simple passthrough
+      const vertSrc = `
+        attribute vec2 a_position;
+        attribute vec2 a_uv;
+        varying vec2 v_uv;
+        void main() { v_uv = a_uv; gl_Position = vec4(a_position, 0.0, 1.0); }
+      `;
+      // Fragment: pure mix — no vignette, no colour shift, no scaling
+      const fragSrc = `
+        precision mediump float;
+        varying vec2 v_uv;
+        uniform sampler2D u_main;
+        uniform sampler2D u_blend;
+        uniform float u_mix;
+        void main() {
+          vec4 a = texture2D(u_main,  v_uv);
+          vec4 b = texture2D(u_blend, v_uv);
+          gl_FragColor = mix(a, b, smoothstep(0.0, 1.0, u_mix));
+        }
+      `;
+
+      const compile = (type, src) => {
+        const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s;
+      };
+      const prog = gl.createProgram();
+      gl.attachShader(prog, compile(gl.VERTEX_SHADER, vertSrc));
+      gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fragSrc));
+      gl.linkProgram(prog);
+
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+        fallbackVid.style.opacity = "1"; fallbackVid.play().catch(() => { }); return;
+      }
+      gl.useProgram(prog);
+
+      // Fullscreen quad
+      const geo = new Float32Array([-1, -1, 0, 1, 1, -1, 1, 1, -1, 1, 0, 0, 1, 1, 1, 0]);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, geo, gl.STATIC_DRAW);
+      const stride = 16;
+      const posLoc = gl.getAttribLocation(prog, "a_position");
+      const uvLoc = gl.getAttribLocation(prog, "a_uv");
+      gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, stride, 0);
+      gl.enableVertexAttribArray(uvLoc); gl.vertexAttribPointer(uvLoc, 2, gl.FLOAT, false, stride, 8);
+
+      const mkTex = (unit) => {
+        const t = gl.createTexture();
+        gl.activeTexture(unit); gl.bindTexture(gl.TEXTURE_2D, t);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        return t;
+      };
+      const texMain = mkTex(gl.TEXTURE0);
+      const texBlend = mkTex(gl.TEXTURE1);
+      gl.uniform1i(gl.getUniformLocation(prog, "u_main"), 0);
+      gl.uniform1i(gl.getUniformLocation(prog, "u_blend"), 1);
+      const mixLoc = gl.getUniformLocation(prog, "u_mix");
+
+      let primary = mainVideo, secondary = blendVideo;
+      let overlapActive = false, metaReady = 0, started = false;
+
+      const resize = () => {
+        const w = bgHost.clientWidth || 1512, h = bgHost.clientHeight || 716;
+        if (bgCanvas.width !== w || bgCanvas.height !== h) {
+          bgCanvas.width = w; bgCanvas.height = h; gl.viewport(0, 0, w, h);
+        }
+      };
+
+      const upload = (unit, tex, vid) => {
+        if (vid.readyState < 2) return;
+        gl.activeTexture(unit); gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, vid);
+      };
+
+      const syncLoop = () => {
+        const dur = primary.duration;
+        if (!dur || !isFinite(dur)) return 0;
+        const blendDur = Math.min(2.2, Math.max(1.2, dur * 0.28));
+        const threshold = dur - blendDur;
+        const cur = primary.currentTime;
+        if (!overlapActive && cur >= threshold) {
+          overlapActive = true;
+          secondary.currentTime = 0.001;
+          secondary.play().catch(() => { });
+        }
+        if (overlapActive) {
+          const t = Math.min(Math.max((cur - threshold) / blendDur, 0), 1);
+          if (t >= 0.995) {
+            primary.pause(); primary.currentTime = 0.001;
+            const tmp = primary; primary = secondary; secondary = tmp;
+            overlapActive = false;
+            secondary.pause(); secondary.currentTime = 0.001;
+            return 0;
+          }
+          return t;
+        }
+        return 0;
+      };
+
+      const bgRender = () => {
+        resize();
+        if (primary.readyState >= 2) {
+          const mixVal = syncLoop();
+          upload(gl.TEXTURE0, texMain, primary);
+          upload(gl.TEXTURE1, texBlend, secondary);
+          gl.uniform1f(mixLoc, mixVal);
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+        requestAnimationFrame(bgRender);
+      };
+
+      const markReady = () => {
+        metaReady++;
+        if (metaReady < 2 || started) return;
+        started = true;
+        fallbackVid.pause();
+        primary.currentTime = 0.001; secondary.currentTime = 0.001; secondary.pause();
+        primary.play().finally(() => requestAnimationFrame(bgRender));
+      };
+
+      mainVideo.addEventListener("loadedmetadata", markReady, { once: true });
+      blendVideo.addEventListener("loadedmetadata", markReady, { once: true });
+
+      fallbackVid.play().catch(() => { });
+      mainVideo.load();
+      blendVideo.load();
+    })();
+
+    function updateBackgroundLoop() { } // no-op — bg has its own rAF loop
+
+    let objectModel = null;
+    const rollBtn = document.getElementById("roll-btn");
+    const rollResult = document.getElementById("roll-result");
+    const svitokOverlay = document.getElementById("svitok-overlay");
+    const svitokClose = document.getElementById("svitok-close");
+    const bonusOverlay = document.getElementById("bonus-overlay");
+    const bonusClose = document.getElementById("bonus-close");
+    const bonusSlotName = document.getElementById("bonus-slot-name");
+    const giftOverlay = document.getElementById("gift-overlay");
+    const giftClose = document.getElementById("gift-close");
+    const zadanieOverlay = document.getElementById("zadanie-overlay");
+    const zadanieText = document.getElementById("zadanie-text");
+    const zadanieClose = document.getElementById("zadanie-close");
+    const onewOverlay = document.getElementById("onew-overlay");
+    const onewSlotName = document.getElementById("onew-slot-name");
+    const onewPrice = document.getElementById("onew-price");
+    const onewSpinBtn = document.getElementById("onew-spin");
+    const onewCloseBtn = document.getElementById("onew-close");
+    const onewWheel = document.getElementById("onew-wheel");
+    const fishOverlay = document.getElementById("fish-overlay");
+    const fishSlotName = document.getElementById("fish-slot-name");
+    const fishPrice = document.getElementById("fish-price");
+    const fishSpinBtn = document.getElementById("fish-spin");
+    const fishCloseBtn = document.getElementById("fish-close");
+    const fishWheel = document.getElementById("fish-wheel");
+    const dogOverlay = document.getElementById("dog-overlay");
+    const dogSlotName = document.getElementById("dog-slot-name");
+    const dogPrice = document.getElementById("dog-price");
+    const dogSpinBtn = document.getElementById("dog-spin");
+    const dogCloseBtn = document.getElementById("dog-close");
+    const dogWheel = document.getElementById("dog-wheel");
+    let isRolling = false;
+    let rollFramesLeft = 0;
+    let isSettling = false;
+    let settleT = 0;
+    let settleFromQuat = null;
+    let settleToQuat = null;
+    let pendingFrontKey = "posZ";
+    const angularVelocity = new THREE.Vector3(0, 0, 0);
+    const frontPresets = {
+      posZ: [0, 0, 0],
+      negZ: [0, Math.PI, 0],
+      posX: [0, -Math.PI / 2, 0],
+      negX: [0, Math.PI / 2, 0],
+      posY: [-Math.PI / 2, 0, 0],
+      negY: [Math.PI / 2, 0, 0]
+    };
+    // Base island tilt: keep dice visually standing on island plane.
+    const DICE_BASE_X = THREE.MathUtils.degToRad(16);
+    const DICE_BASE_Y = THREE.MathUtils.degToRad(-2);
+    const DICE_BASE_Z = THREE.MathUtils.degToRad(-7);
+    const baseIslandQuat = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(DICE_BASE_X, DICE_BASE_Y, DICE_BASE_Z)
+    );
+
+    function getFaceQuaternion(faceKey) {
+      const [fx, fy, fz] = frontPresets[faceKey];
+      const faceQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(fx, fy, fz));
+      return baseIslandQuat.clone().multiply(faceQuat);
+    }
+    const frontAxisToValue = {
+      posZ: 1,
+      negZ: 6,
+      posX: 2,
+      negX: 5,
+      posY: 3,
+      negY: 4
+    };
+    const calibratedValueMap = {
+      1: 5,
+      2: 6,
+      3: 4,
+      4: 3,
+      5: 1,
+      6: 2
+    };
+    let chipModel = null;
+    const CHIP_ENABLED = true; // Temporary switch: keeps chip code in place, but hides it.
+    let chipSpinEnabled = true;
+    const CHIP_Y_OFFSET = -2;
+    const CHIP_STEP_PAUSE_MS = 90;
+    const bonusSlotsPool = [
+      "mummyland theasures",
+      "le cowboy",
+      "666",
+      "sugar rush1000",
+      "fruit party 2",
+      "dork unit",
+      "5 lions Megaways",
+      "le zeus",
+      "wild west gold",
+      "lady wolf moon",
+      "le bandit",
+      "knight hot spotz",
+      "wanted dead or a wild",
+      "mining rush",
+      "the vampires 2",
+      "frkn bananas",
+      "5 frozen",
+      "Crew",
+      "starlight Princess",
+      "kraken",
+      "hot ross",
+      "le king",
+      "santa mummy",
+      "money train 3",
+      "money train 4",
+      "starlight Princess 1000",
+      "ice Princess",
+      "r.i.p city",
+      "anubis"
+    ];
+    const oneWSlotsPool = [
+      "Gates of 1win",
+      "1 win bonanza",
+      "house of sins 1win",
+      "Gates of lucky",
+      "1 win billion bananza",
+      "zeus the thunderer deluxe",
+      "book of 1win",
+      "1 win baba yaga",
+      "1 win thor rage"
+    ];
+    let oneWWheelDeg = 0;
+    let oneWIsSpinning = false;
+
+    const fishSlotsPool = [
+      "Big Bass Secrets of the Golden Lake",
+      "Big Bass Splash",
+      "Big Bass Vegas Double Down Deluxe",
+      "Big Bass Floats My Boat",
+      "Big Bass Bonanza",
+      "Big Bass Amazon Xtreme",
+      "Big Bass Bonanza 1000",
+      "Big Bass Boxing Bonus Round",
+      "Big Bass Hold & Spinner",
+      "Big Bass Splash 1000",
+      "Big Bass Mission Fishin\u2019",
+      "Big Bass Reel Repeat",
+      "Big Bass Bonanza 3 Reeler",
+      "Big Bass Return to the Races",
+      "Big Bass Bonanza Megaways",
+      "Big Bass Keeping it Reel",
+      "Big Bass Hold & Spinner Megaways",
+      "Big Bass Reel Action",
+      "Big Bass Crash",
+      "Christmas Big Bass Bonanza",
+      "Big Bass Bash",
+      "Big Bass Halloween",
+      "Bigger Bass Bonanza",
+      "Bigger Bass Splash"
+    ];
+    let fishWheelDeg = 0;
+    let fishIsSpinning = false;
+
+    const dogSlotsPool = [
+      "The Dog House",
+      "The Dog House Megaways",
+      "The Dog House Royal Hunt",
+      "The Dog House Multihold",
+      "The Dog House: Dog or Alive",
+      "The Dog House: Big Bad Wolf",
+      "The Dog House Multihold Crew"
+    ];
+    let dogWheelDeg = 0;
+    let dogIsSpinning = false;
+
+    function showSvitok(type) {
+      const svitokText = document.getElementById("svitok-text");
+      const svitokKost = document.getElementById("svitok-kost");
+      const svitokClose = document.getElementById("svitok-close");
+      
+      if (svitokText) {
+        if (type === "finish") {
+          svitokOverlay.classList.add("finish-darkness");
+          svitokText.classList.add("finish-text");
+          if (svitokKost) svitokKost.style.display = "block";
+          if (svitokClose) svitokClose.style.display = "none";
+          svitokText.textContent = `Казалось, кончен этот путь,\nНо мрак не дал земле уснуть.\nИ под собачьим островом\nСкрыт тайный ход в забытый дом.\n\nТам не горят давно огни,\nЛишь тени бродят в глубине,\nИ среди древних пёсьих плит\nИной артефакт во тьме лежит.\n\nНе кубок, не венец царей,\nНе меч из пламени морей,\nА кость из золота литого,\nДля стаи знамя рокового.\n\nИ потому, сквозь тьму и взор,\nВперёд отправится Скилзор.\nЕму принять последний след,\nВедь здесь финала вовсе нет.`;
+        } else {
+          svitokOverlay.classList.remove("finish-darkness");
+          svitokText.classList.remove("finish-text");
+          if (svitokKost) svitokKost.style.display = "none";
+          if (svitokClose) svitokClose.style.display = "block";
+          svitokText.textContent = `На остров тайный, в час ночной,\nПришёл герой наш озорной,\nГде шепчет ветер у костра,\nЧто началась давно игра.\n\nГде клетки светятся во мгле,\nКак звёзды где-то вдалеке,\nИ каждый ход, и каждый знак\nРешают, будет фарт иль мрак.\n\nЗдесь ждут загадки, смех и бой,\nИ путь не будет уж простой,\nНо если сердце горячо —\nТо и занос придёт ещё.\n\nЭвелон, вперёд иди,\nЗолотую кость найди,\nПусть тебе морской прибой\nПуть укажет за мечтой.`;
+        }
+      }
+      svitokOverlay.classList.add("visible");
+    }
+
+    function hideSvitok() {
+      svitokOverlay.classList.remove("visible");
+    }
+
+    function showBonusTask(slotName) {
+      bonusSlotName.textContent = slotName || "-";
+      bonusOverlay.classList.add("visible");
+    }
+
+    function hideBonusTask() {
+      bonusOverlay.classList.remove("visible");
+    }
+
+    function showGiftTask() {
+      giftOverlay.classList.add("visible");
+    }
+
+    function hideGiftTask() {
+      giftOverlay.classList.remove("visible");
+    }
+    
+    // === DEAD OVERLAY ===
+    const deadOverlay = document.getElementById("dead-overlay");
+    const deadTitle = document.getElementById("dead-title");
+    const deadTask = document.getElementById("dead-task");
+    const deadClose = document.getElementById("dead-close");
+
+    function showDeadTask(id) {
+      if (id === 'spr14') {
+        deadTitle.textContent = "Super giveaway";
+        deadTask.textContent = "Розыгрыш чату 2000$";
+      } else if (id === 'spr35') {
+        deadTitle.textContent = "Super bonus";
+        deadTask.textContent = "Купи бонус за 10.000$";
+      } else if (id === 'spr53') {
+        deadTitle.textContent = "Super Task";
+        deadTask.textContent = "Здесь будет текст задания..."; // Placeholder or actual task
+      } else {
+        deadTitle.textContent = "Dead Cell";
+        deadTask.textContent = "Пустая клетка.";
+      }
+      deadOverlay.classList.add("visible");
+    }
+
+    deadClose.addEventListener("click", () => {
+      deadOverlay.classList.remove("visible");
+    });
+
+    function showZadanieTask(text) {
+      if (text) zadanieText.textContent = text;
+      zadanieOverlay.classList.add("visible");
+    }
+
+    function hideZadanieTask() {
+      zadanieOverlay.classList.remove("visible");
+    }
+
+    function buildOneWWheel() {
+      if (!onewWheel) return;
+      onewWheel.innerHTML = "";
+      const count = oneWSlotsPool.length;
+      const step = 360 / count;
+      const radius = 112;
+      oneWSlotsPool.forEach((name, i) => {
+        const centerAngle = i * step + step / 2;
+        const angle = centerAngle - 90;
+        const label = document.createElement("div");
+        label.className = "onew-label";
+        label.textContent = name;
+        label.style.transform = `rotate(${angle}deg) translate(48px, -50%)`;
+        onewWheel.appendChild(label);
+      });
+    }
+
+    function showOneWTask() {
+      onewSlotName.textContent = "";
+      onewSlotName.style.display = "none";
+      onewPrice.style.display = "none";
+      onewSpinBtn.disabled = false;
+      onewSpinBtn.style.display = "inline-block";
+      onewCloseBtn.style.display = "none";
+      oneWIsSpinning = false;
+      onewOverlay.classList.add("visible");
+    }
+
+    function hideOneWTask() {
+      oneWIsSpinning = false;
+      onewOverlay.classList.remove("visible");
+    }
+
+    function spinOneW() {
+      if (oneWIsSpinning) return;
+      oneWIsSpinning = true;
+      onewSpinBtn.disabled = true;
+
+      const count = oneWSlotsPool.length;
+      const step = 360 / count;
+      const winIndex = Math.floor(Math.random() * count);
+      const targetCenter = winIndex * step + step / 2;
+      const targetDeg = 360 - targetCenter;
+      oneWWheelDeg += 360 * 6 + targetDeg;
+      onewWheel.style.transform = `rotate(${oneWWheelDeg}deg)`;
+
+      const onDone = () => {
+        onewWheel.removeEventListener("transitionend", onDone);
+        const finalName = oneWSlotsPool[winIndex];
+        onewSlotName.textContent = finalName;
+        onewSlotName.style.display = "block";
+        onewPrice.style.display = "block";
+        onewCloseBtn.style.display = "inline-block";
+        oneWIsSpinning = false;
+      };
+      onewWheel.addEventListener("transitionend", onDone, { once: true });
+    }
+
+    function buildDogWheel() {
+      if (!dogWheel) return;
+      dogWheel.innerHTML = "";
+      const count = dogSlotsPool.length;
+      const step = 360 / count;
+      const radius = 112;
+      dogSlotsPool.forEach((name, i) => {
+        const centerAngle = i * step + step / 2;
+        const angle = centerAngle - 90;
+        const label = document.createElement("div");
+        label.className = "dog-label";
+        label.textContent = name;
+        label.style.transform = `rotate(${angle}deg) translate(48px, -50%)`;
+        dogWheel.appendChild(label);
+      });
+    }
+
+    function showDogTask() {
+      dogSlotName.textContent = "";
+      dogSlotName.style.display = "none";
+      dogPrice.style.display = "none";
+      dogSpinBtn.disabled = false;
+      dogSpinBtn.style.display = "inline-block";
+      dogCloseBtn.style.display = "none";
+      dogIsSpinning = false;
+      dogOverlay.classList.add("visible");
+    }
+
+    function hideDogTask() {
+      dogIsSpinning = false;
+      dogOverlay.classList.remove("visible");
+    }
+
+    function spinDog() {
+      if (dogIsSpinning) return;
+      dogIsSpinning = true;
+      dogSpinBtn.disabled = true;
+
+      const count = dogSlotsPool.length;
+      const step = 360 / count;
+      const winIndex = Math.floor(Math.random() * count);
+      const targetCenter = winIndex * step + step / 2;
+      const targetDeg = 360 - targetCenter;
+      dogWheelDeg += 360 * 6 + targetDeg;
+      dogWheel.style.transform = `rotate(${dogWheelDeg}deg)`;
+
+      const onDone = () => {
+        dogWheel.removeEventListener("transitionend", onDone);
+        const finalName = dogSlotsPool[winIndex];
+        dogSlotName.textContent = finalName;
+        dogSlotName.style.display = "block";
+        dogPrice.textContent = "2000$";
+        dogPrice.style.display = "block";
+        dogCloseBtn.style.display = "inline-block";
+        dogIsSpinning = false;
+      };
+      dogWheel.addEventListener("transitionend", onDone, { once: true });
+    }
+
+    function buildFishWheel() {
+      if (!fishWheel) return;
+      fishWheel.innerHTML = "";
+      const count = fishSlotsPool.length;
+      const step = 360 / count;
+      fishSlotsPool.forEach((name, i) => {
+        const centerAngle = i * step + step / 2;
+        const angle = centerAngle - 90;
+        const label = document.createElement("div");
+        label.className = "fish-label";
+        label.textContent = name;
+        label.style.transform = `rotate(${angle}deg) translate(66px, -50%)`;
+        fishWheel.appendChild(label);
+      });
+    }
+
+    function showFishTask() {
+      fishSlotName.textContent = "";
+      fishSlotName.style.display = "none";
+      fishPrice.style.display = "none";
+      fishSpinBtn.disabled = false;
+      fishSpinBtn.style.display = "inline-block";
+      fishCloseBtn.style.display = "none";
+      fishIsSpinning = false;
+      fishOverlay.classList.add("visible");
+    }
+
+    function hideFishTask() {
+      fishIsSpinning = false;
+      fishOverlay.classList.remove("visible");
+    }
+
+    function spinFish() {
+      if (fishIsSpinning) return;
+      fishIsSpinning = true;
+      fishSpinBtn.disabled = true;
+
+      const count = fishSlotsPool.length;
+      const step = 360 / count;
+      const winIndex = Math.floor(Math.random() * count);
+      const targetCenter = winIndex * step + step / 2;
+      const targetDeg = 360 - targetCenter;
+
+      const currentMod = fishWheelDeg % 360;
+      let diff = targetDeg - currentMod;
+      if (diff < 0) diff += 360;
+
+      fishWheelDeg += 360 * 6 + diff;
+      fishWheel.style.transform = `rotate(${fishWheelDeg}deg)`;
+
+      const onDone = () => {
+        fishWheel.removeEventListener("transitionend", onDone);
+        const finalName = fishSlotsPool[winIndex];
+        fishSlotName.textContent = finalName;
+        fishSlotName.style.display = "block";
+        fishPrice.style.display = "block";
+        fishCloseBtn.style.display = "inline-block";
+        fishIsSpinning = false;
+      };
+      fishWheel.addEventListener("transitionend", onDone, { once: true });
+    }
+
+    svitokClose.addEventListener("click", hideSvitok);
+    svitokOverlay.addEventListener("click", (e) => {
+      if (e.target === svitokOverlay) hideSvitok();
+    });
+    bonusClose.addEventListener("click", hideBonusTask);
+    bonusOverlay.addEventListener("click", (e) => {
+      if (e.target === bonusOverlay) hideBonusTask();
+    });
+    giftClose.addEventListener("click", hideGiftTask);
+    giftOverlay.addEventListener("click", (e) => {
+      if (e.target === giftOverlay) hideGiftTask();
+    });
+    zadanieClose.addEventListener("click", hideZadanieTask);
+    zadanieOverlay.addEventListener("click", (e) => {
+      if (e.target === zadanieOverlay) hideZadanieTask();
+    });
+    onewSpinBtn.addEventListener("click", spinOneW);
+    onewCloseBtn.addEventListener("click", hideOneWTask);
+    onewOverlay.addEventListener("click", (e) => {
+      if (e.target === onewOverlay) hideOneWTask();
+    });
+
+    fishSpinBtn.addEventListener("click", spinFish);
+    fishCloseBtn.addEventListener("click", hideFishTask);
+    fishOverlay.addEventListener("click", (e) => {
+      if (e.target === fishOverlay && !fishIsSpinning && fishCloseBtn.style.display !== "none") hideFishTask();
+    });
+
+    buildOneWWheel();
+    buildFishWheel();
+    buildDogWheel();
+
+    dogSpinBtn.addEventListener("click", spinDog);
+    dogCloseBtn.addEventListener("click", hideDogTask);
+    dogOverlay.addEventListener("click", (e) => {
+      if (e.target === dogOverlay && !dogIsSpinning && dogCloseBtn.style.display !== "none") hideDogTask();
+    });
+
+    function getFrontFaceKey(model) {
+      const viewDir = new THREE.Vector3(0, 0, 1);
+      const candidates = [
+        { key: "posX", dir: new THREE.Vector3(1, 0, 0) },
+        { key: "negX", dir: new THREE.Vector3(-1, 0, 0) },
+        { key: "posY", dir: new THREE.Vector3(0, 1, 0) },
+        { key: "negY", dir: new THREE.Vector3(0, -1, 0) },
+        { key: "posZ", dir: new THREE.Vector3(0, 0, 1) },
+        { key: "negZ", dir: new THREE.Vector3(0, 0, -1) }
+      ];
+
+      let bestKey = "posZ";
+      let bestDot = -Infinity;
+
+      for (const c of candidates) {
+        const worldDir = c.dir.clone().applyQuaternion(model.quaternion);
+        const dot = worldDir.dot(viewDir);
+        if (dot > bestDot) {
+          bestDot = dot;
+          bestKey = c.key;
+        }
+      }
+
+      return bestKey;
+    }
+    const loader = new THREE.FBXLoader();
+    loader.load(
+      "Dice.fbx",
+      (model) => {
+        model.traverse((child) => {
+          if (child.isMesh) {
+            const sourceMaterial = Array.isArray(child.material) ? child.material[0] : child.material;
+            const sourceMap = sourceMaterial && sourceMaterial.map ? sourceMaterial.map : null;
+            child.material = new THREE.MeshPhongMaterial({
+              color: 0xffffff,
+              map: sourceMap || null,
+              side: THREE.DoubleSide
+            });
+          }
+        });
+
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z) || 1;
+        const targetSize = 90;
+        const fitScale = targetSize / maxDim;
+
+        model.position.sub(center);
+        model.scale.setScalar(fitScale);
+        // Front view: cube face looks toward the camera.
+        model.quaternion.copy(getFaceQuaternion("posZ"));
+        scene.add(model);
+        objectModel = model;
+        const rawValue = frontAxisToValue[getFrontFaceKey(model)];
+        rollResult.textContent = `Выпало: ${calibratedValueMap[rawValue]}`;
+      },
+      undefined,
+      (error) => {
+        console.error("FBX load error:", error);
+        rollResult.textContent = "Ошибка загрузки Dice.fbx";
+      }
+    );
+
+    if (CHIP_ENABLED) {
+      const gltfLoader = new THREE.GLTFLoader();
+      gltfLoader.load(
+        "chip.glb",
+        (gltf) => {
+          const model = gltf.scene;
+          const initialBox = new THREE.Box3().setFromObject(model);
+          const center = initialBox.getCenter(new THREE.Vector3());
+          const size = initialBox.getSize(new THREE.Vector3());
+          const maxDim = Math.max(size.x, size.y, size.z) || 1;
+          const fitScale = 1.4 / maxDim;
+          model.position.sub(center);
+          model.scale.setScalar(fitScale);
+
+          // Align model so its "feet" sit on the cell anchor line.
+          const alignedBox = new THREE.Box3().setFromObject(model);
+          model.position.y -= alignedBox.min.y;
+
+          chipScene.add(model);
+          chipModel = model;
+        },
+        undefined,
+        (error) => {
+          console.error("GLB load error:", error);
+        }
+      );
+    } else {
+      chipHost.style.display = "none";
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (objectModel && isRolling) {
+        objectModel.rotation.x += angularVelocity.x;
+        objectModel.rotation.y += angularVelocity.y;
+        objectModel.rotation.z += angularVelocity.z;
+        angularVelocity.multiplyScalar(0.985);
+        rollFramesLeft -= 1;
+
+        if (rollFramesLeft <= 0 || angularVelocity.length() < 0.01) {
+          isRolling = false;
+          settleFromQuat = objectModel.quaternion.clone();
+          settleToQuat = getFaceQuaternion(pendingFrontKey);
+          isSettling = true;
+          settleT = 0;
+        }
+      }
+
+      if (objectModel && isSettling) {
+        settleT = Math.min(1, settleT + 0.08);
+        objectModel.quaternion.slerpQuaternions(settleFromQuat, settleToQuat, settleT);
+        if (settleT >= 1) {
+          isSettling = false;
+          const rawValue = frontAxisToValue[getFrontFaceKey(objectModel)];
+          const rolledValue = calibratedValueMap[rawValue];
+          rollResult.textContent = `Выпало: ${rolledValue}`;
+          moveChipBySteps(rolledValue);
+        }
+      }
+
+      if (chipModel && chipSpinEnabled) {
+        chipModel.rotation.y += 0.02;
+      }
+
+      updateBackgroundLoop();
+      renderer.render(scene, camera);
+      chipRenderer.render(chipScene, chipCamera);
+    }
+    animate();
+
+    rollBtn.addEventListener("click", () => {
+      if (!objectModel || isRolling || isSettling) return;
+      hideGensBubble();
+      hideZloyBubble();
+      hideMokrBubble();
+      hideSkilzBubble();
+      if (window.dogTaskTimeout) clearTimeout(window.dogTaskTimeout);
+      rollResult.textContent = "Выпало: ...";
+      const keys = Object.keys(frontPresets);
+      pendingFrontKey = keys[Math.floor(Math.random() * keys.length)];
+      angularVelocity.set(
+        0.25 + Math.random() * 0.25,
+        0.25 + Math.random() * 0.25,
+        0.25 + Math.random() * 0.25
+      );
+      rollFramesLeft = 320 + Math.floor(Math.random() * 40);
+      isRolling = true;
+    });
+
+    window.addEventListener("resize", () => {
+      const w = host.clientWidth;
+      const h = host.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+
+      const cw = chipHost.clientWidth;
+      const ch = chipHost.clientHeight;
+      chipCamera.aspect = cw / ch;
+      chipCamera.updateProjectionMatrix();
+      chipRenderer.setSize(cw, ch);
+
+      const bw = bgHost.clientWidth;
+      const bh = bgHost.clientHeight;
+      bgRenderer.setSize(bw, bh);
+    });
+
+    // Move character to a new board cell center.
+    function setChipCell(x, y) {
+      chipHost.style.left = `${x}px`;
+      chipHost.style.top = `${y + CHIP_Y_OFFSET}px`;
+    }
+    window.setChipCell = setChipCell;
+
+    function parseSpriteStateFromStyle(el, idx) {
+      const transform = el.style.transform || "";
+      const rx = Number((transform.match(/rotateX\(([-\d.]+)deg\)/i) || [])[1] || 0);
+      const ry = Number((transform.match(/rotateY\(([-\d.]+)deg\)/i) || [])[1] || 0);
+      const rz = Number((transform.match(/rotateZ\(([-\d.]+)deg\)/i) || [])[1] || 0);
+      const sc = Number((transform.match(/scale\(([-\d.]+)\)/i) || [])[1] || 1);
+      return {
+        x: Number(el.style.left.replace("px", "")) || 0,
+        y: Number(el.style.top.replace("px", "")) || 0,
+        z: Number(el.style.zIndex || idx),
+        rotationX: Number.isFinite(rx) ? rx : 0,
+        rotationY: Number.isFinite(ry) ? ry : 0,
+        rotationZ: Number.isFinite(rz) ? rz : 0,
+        scale: Number.isFinite(sc) ? sc : 1,
+        asset: (el.getAttribute("src") || "").toLowerCase()
+      };
+    }
+
+    let allCells = Array.from(document.querySelectorAll(".placed-sprite"));
+    const spriteState = new WeakMap();
+    allCells.forEach((el, idx) => spriteState.set(el, parseSpriteStateFromStyle(el, idx)));
+    let bonusSlotByCell = new WeakMap();
+
+    function shuffleArray(list) {
+      const arr = list.slice();
+      for (let i = arr.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function assignBonusSlots() {
+      bonusSlotByCell = new WeakMap();
+      const bonusCells = allCells
+        .filter((el) => (spriteState.get(el)?.asset || "") === "bonus.png")
+        .slice()
+        .sort((a, b) => spriteState.get(a).z - spriteState.get(b).z);
+      const shuffledSlots = shuffleArray(bonusSlotsPool);
+      bonusCells.forEach((el, i) => {
+        bonusSlotByCell.set(el, shuffledSlots[i % shuffledSlots.length]);
+      });
+    }
+
+    // === GENS SPEECH BUBBLE ===
+    const gensBubble = (() => {
+      const gensSpr = document.querySelector('.placed-sprite[data-id="spr4"]');
+      if (!gensSpr) return null;
+      const bubble = document.createElement('div');
+      bubble.className = 'gens-bubble';
+      bubble.innerHTML = '<span class="gens-bubble-name">Gensyxa:</span>' +
+        'Путник, наконец ты добрался,\nЯ уж с хрустальным шаром заскучалась.\nОн мне шепнул: "Ну хватит ждать",\nПора в Madame Destiny судьбу испытать.';
+      gensSpr.parentElement.appendChild(bubble);
+      return { el: bubble, sprite: gensSpr };
+    })();
+
+    function showGensBubble() {
+      if (!gensBubble) return;
+      const sp = gensBubble.sprite;
+      const st = spriteState.get(sp);
+      if (!st) return;
+      gensBubble.el.style.left = st.x + 'px';
+      gensBubble.el.style.top = st.y + 'px';
+      gensBubble.el.classList.add('visible');
+    }
+    function hideGensBubble() {
+      if (!gensBubble) return;
+      gensBubble.el.classList.remove('visible');
+    }
+
+    // === ZLOY SPEECH BUBBLE ===
+    const zloyBubble = (() => {
+      const zloySpr = document.querySelector('.placed-sprite[data-id="spr1"]');
+      if (!zloySpr) return null;
+      const bubble = document.createElement('div');
+      bubble.className = 'zloy-bubble';
+      bubble.innerHTML = '<span class="zloy-bubble-name">Zloy:</span>' +
+        'Я Зевс, брат, у нас тут всё по красоте:\nЛибо занос, либо сидишь в пустоте.\nКупи бонус в Zeus vs Hades скорей —\nПускай Олимп бахнет для нас покрупней';
+      zloySpr.parentElement.appendChild(bubble);
+      return { el: bubble, sprite: zloySpr };
+    })();
+
+    function showZloyBubble() {
+      if (!zloyBubble) return;
+      const sp = zloyBubble.sprite;
+      const st = spriteState.get(sp);
+      if (!st) return;
+      zloyBubble.el.style.left = st.x + 'px';
+      zloyBubble.el.style.top = st.y + 'px';
+      zloyBubble.el.classList.add('visible');
+    }
+    function hideZloyBubble() {
+      if (!zloyBubble) return;
+      zloyBubble.el.classList.remove('visible');
+    }
+
+    // === MOKR SPEECH BUBBLE ===
+    const mokrBubble = (() => {
+      const mokrSpr = document.querySelector('.placed-sprite[data-id="spr3"]');
+      if (!mokrSpr) return null;
+      const bubble = document.createElement('div');
+      bubble.className = 'mokr-bubble';
+      bubble.innerHTML = '<span class="mokr-bubble-name">Mokrivskiy:</span>' +
+        'Сливы, яблоки, бананы — мой королевский огород,\nТут или сад тебе насыплет, или мимо всё пройдёт.\nНо лучше не гадать, а сделать ход смелей —\nКупи бонус в Bonanza x1000 поскорей';
+      mokrSpr.parentElement.appendChild(bubble);
+      return { el: bubble, sprite: mokrSpr };
+    })();
+
+    function showMokrBubble() {
+      if (!mokrBubble) return;
+      const sp = mokrBubble.sprite;
+      const st = spriteState.get(sp);
+      if (!st) return;
+      mokrBubble.el.style.left = st.x + 'px';
+      mokrBubble.el.style.top = st.y + 'px';
+      mokrBubble.el.classList.add('visible');
+    }
+    function hideMokrBubble() {
+      if (!mokrBubble) return;
+      mokrBubble.el.classList.remove('visible');
+    }
+
+    // === SKILZ SPEECH BUBBLE ===
+    const skilzBubble = (() => {
+      const skilzSpr = document.querySelector('.placed-sprite[data-id="spr2"]');
+      if (!skilzSpr) return null;
+      const bubble = document.createElement('div');
+      bubble.className = 'skilz-bubble';
+      bubble.innerHTML = '<span class="skilz-bubble-name">Skilz:</span>' +
+        'Ты дошёл до земли, где не лают впустую,\nГде псы за удачу встают в карауле.\nХочешь пройти и не сбиться с маршрута —\nКрути собачью рулетку, посмотрим, что будет.';
+      skilzSpr.parentElement.appendChild(bubble);
+      return { el: bubble, sprite: skilzSpr };
+    })();
+
+    function showSkilzBubble() {
+      if (!skilzBubble) return;
+      const sp = skilzBubble.sprite;
+      const st = spriteState.get(sp);
+      if (!st) return;
+      skilzBubble.el.style.left = st.x + 'px';
+      skilzBubble.el.style.top = st.y + 'px';
+      skilzBubble.el.classList.add('visible');
+    }
+    function hideSkilzBubble() {
+      if (!skilzBubble) return;
+      skilzBubble.el.classList.remove('visible');
+    }
+
+    // === TIME OVERLAY LOGIC ===
+    const timeOverlay = document.getElementById("time-overlay");
+    const timeTimerDisplay = document.getElementById("time-timer-display");
+    const timeResultMsg = document.getElementById("time-result-msg");
+    const timeBtnSuccess = document.getElementById("time-btn-success");
+    const timeBtnFail = document.getElementById("time-btn-fail");
+    const timeBtnClose = document.getElementById("time-btn-close");
+    let timeInterval = null;
+
+    function showTimeTask() {
+      timeOverlay.classList.add("visible");
+      timeBtnSuccess.style.display = "none";
+      timeBtnFail.style.display = "none";
+      timeBtnClose.style.display = "none";
+      timeResultMsg.style.display = "none";
+      timeTimerDisplay.style.display = "block";
+      timeTimerDisplay.textContent = "15";
+      
+      let timeLeft = 15;
+      if (timeInterval) clearInterval(timeInterval);
+      
+      timeInterval = setInterval(() => {
+        timeLeft -= 1;
+        timeTimerDisplay.textContent = String(timeLeft);
+        if (timeLeft <= 0) {
+          clearInterval(timeInterval);
+          timeBtnSuccess.style.display = "block";
+          timeBtnFail.style.display = "block";
+        }
+      }, 1000);
+    }
+
+    function closeTimePanelAndShowMokr() {
+      timeOverlay.classList.remove("visible");
+      showMokrBubble();
+    }
+
+    timeBtnSuccess.addEventListener("click", () => {
+      closeTimePanelAndShowMokr();
+    });
+
+    timeBtnFail.addEventListener("click", () => {
+      timeResultMsg.style.display = "block";
+      timeBtnSuccess.style.display = "none";
+      timeBtnFail.style.display = "none";
+      timeTimerDisplay.style.display = "none";
+      timeBtnClose.style.display = "block";
+    });
+
+    timeBtnClose.addEventListener("click", () => {
+      closeTimePanelAndShowMokr();
+    });
+
+    function handleCellLanding(el) {
+      const asset = (spriteState.get(el)?.asset || "").toLowerCase();
+      if (asset === "srart.png") {
+        showSvitok("start");
+      }
+      if (asset === "finish.png") {
+        showSvitok("finish");
+      }
+      if (asset === "bonus.png") {
+        showBonusTask(bonusSlotByCell.get(el));
+      }
+      if (asset === "gift.png") {
+        showGiftTask();
+      }
+      if (asset === "1w.png") {
+        showOneWTask();
+      }
+      if (asset === "fish.png") {
+        showFishTask();
+      }
+      if (asset === "zadanie.png") {
+        showZadanieTask();
+      }
+      if (asset === "dog.png") {
+        showSkilzBubble();
+        if (window.dogTaskTimeout) clearTimeout(window.dogTaskTimeout);
+        window.dogTaskTimeout = setTimeout(() => {
+          showDogTask();
+        }, 5000);
+      } else {
+        hideSkilzBubble();
+      }
+      if (asset === "portal.png") {
+        // Only show bubble on the first portal (spr8), not on the second (spr9)
+        const cellId = (el.getAttribute('data-id') || '').toLowerCase();
+        if (cellId === 'spr8') {
+          showGensBubble();
+        } else {
+          hideGensBubble();
+        }
+      } else {
+        hideGensBubble();
+      }
+      if (asset === "save.png") {
+        showZloyBubble();
+      } else {
+        hideZloyBubble();
+      }
+      if (asset === "time.png") {
+        showTimeTask();
+      } else {
+        hideMokrBubble();
+      }
+      if (asset === "dead.png") {
+        showDeadTask(el.getAttribute("data-id"));
+      }
+    }
+
+    function buildPathCells() {
+      const cellsByOrder = allCells
+        .map((el, idx) => {
+          const st = spriteState.get(el);
+          const id = (el.getAttribute("data-id") || "").toLowerCase();
+          const idNum = Number((id.match(/^spr(\d+)$/) || [])[1] || Number.NaN);
+          return { el, z: st.z, asset: st.asset, idx, idNum };
+        })
+        .sort((a, b) => {
+          const aHasId = Number.isFinite(a.idNum);
+          const bHasId = Number.isFinite(b.idNum);
+          if (aHasId && bHasId && a.idNum !== b.idNum) return a.idNum - b.idNum;
+          if (a.z !== b.z) return a.z - b.z;
+          return a.idx - b.idx;
+        });
+
+      const startOrderIndex = cellsByOrder.findIndex((c) => c.asset === "srart.png");
+      const finishOrderIndex = cellsByOrder.findIndex((c) => c.asset === "finish.png");
+      const path =
+        startOrderIndex >= 0 && finishOrderIndex >= 0 && finishOrderIndex >= startOrderIndex
+          ? cellsByOrder.slice(startOrderIndex, finishOrderIndex + 1)
+          : [];
+
+      allCells.forEach((el) => delete el.dataset.pathIndex);
+      path.forEach((c, i) => {
+        c.el.dataset.pathIndex = String(i);
+      });
+      return path;
+    }
+
+    let pathCells = buildPathCells();
+    assignBonusSlots();
+
+    let chipPathIndex = 0;
+    let chipMoving = false;
+    let chipMoveQueuedIndex = null;
+
+    function getCellAnchor(el) {
+      const st = spriteState.get(el);
+      if (!st) return { x: 0, y: 0 };
+      const rxRad = (st.rotationX * Math.PI) / 180;
+      const ryRad = (st.rotationY * Math.PI) / 180;
+      const w = el.naturalWidth || 0;
+      const h = el.naturalHeight || 0;
+      const shiftX = Math.sin(ryRad) * 0.18 * w * st.scale;
+      const shiftY = Math.sin(rxRad) * 0.18 * h * st.scale;
+      return { x: st.x + shiftX, y: st.y + shiftY };
+    }
+
+    if (pathCells.length) {
+      const a = getCellAnchor(pathCells[0].el);
+      setChipCell(a.x, a.y);
+      handleCellLanding(pathCells[0].el);
+    }
+
+    function waitChipTransition() {
+      return new Promise((resolve) => {
+        const onEnd = () => {
+          chipHost.removeEventListener("transitionend", onEnd);
+          resolve();
+        };
+        chipHost.addEventListener("transitionend", onEnd, { once: true });
+        setTimeout(() => {
+          chipHost.removeEventListener("transitionend", onEnd);
+          resolve();
+        }, 560);
+      });
+    }
+
+    function waitMs(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    async function moveChipToPathIndex(targetIndex) {
+      if (!pathCells.length) return;
+      const clamped = Math.max(0, Math.min(pathCells.length - 1, targetIndex));
+      if (chipMoving) {
+        chipMoveQueuedIndex = clamped;
+        return;
+      }
+
+      chipMoving = true;
+      const direction = clamped >= chipPathIndex ? 1 : -1;
+
+      // Always move one cell at a time to pass every cell on the path.
+      while (chipPathIndex !== clamped) {
+        chipPathIndex += direction;
+        const next = pathCells[chipPathIndex];
+        const a = getCellAnchor(next.el);
+        setChipCell(a.x, a.y);
+        await waitChipTransition();
+        await waitMs(CHIP_STEP_PAUSE_MS);
+
+        // Check for cells that stop movement
+        const stepAsset = (spriteState.get(next.el)?.asset || "").toLowerCase();
+        const stepId = (next.el.getAttribute('data-id') || '').toLowerCase();
+
+        // Stop on first portal (spr8)
+        if (stepAsset === "portal.png" && stepId === "spr8") {
+          break;
+        }
+        // Stop on save
+        if (stepAsset === "save.png") {
+          break;
+        }
+        // Stop on dog
+        if (stepAsset === "dog.png") {
+          break;
+        }
+        // Stop on time
+        if (stepAsset === "time.png") {
+          break;
+        }
+      }
+
+      handleCellLanding(pathCells[chipPathIndex].el);
+
+      chipMoving = false;
+      if (chipMoveQueuedIndex !== null && chipMoveQueuedIndex !== chipPathIndex) {
+        const queued = chipMoveQueuedIndex;
+        chipMoveQueuedIndex = null;
+        moveChipToPathIndex(queued);
+      } else {
+        chipMoveQueuedIndex = null;
+      }
+    }
+
+    function moveChipBySteps(steps) {
+      const amount = Number(steps) || 0;
+      if (!pathCells.length || amount <= 0) return;
+      const target = Math.min(pathCells.length - 1, chipPathIndex + amount);
+      moveChipToPathIndex(target);
+    }
+
+    window.moveChipToStep = (stepIndex) => {
+      moveChipToPathIndex(Number(stepIndex) || 0);
+    };
+
+    allCells.forEach((cell) => bindCellClick(cell));
+
+    const toolPanel = document.getElementById("tool-panel");
+    const showTools = document.getElementById("show-tools");
+    const hideTools = document.getElementById("hide-tools");
+    const cellSelect = document.getElementById("cell-select");
+    const cellX = document.getElementById("cell-x");
+    const cellY = document.getElementById("cell-y");
+    const cellStep = document.getElementById("cell-step");
+    const cellScale = document.getElementById("cell-scale");
+    const cellRz = document.getElementById("cell-rz");
+    const applyXY = document.getElementById("apply-xy");
+    const applySR = document.getElementById("apply-sr");
+    const copyOne = document.getElementById("copy-one");
+    const copyAllCells = document.getElementById("copy-all-cells");
+    const deleteCellBtn = document.getElementById("delete-cell");
+    const newCellAsset = document.getElementById("new-cell-asset");
+    const addCellBtn = document.getElementById("add-cell");
+    const toolStatus = document.getElementById("tool-status");
+
+    let selectedCell = allCells[0] || null;
+    let suppressNextCellClick = false;
+    let dragState = null;
+
+    function isToolModeEnabled() {
+      return !toolPanel.classList.contains("hidden") && getComputedStyle(toolPanel).display !== "none";
+    }
+
+    function refreshDragModeClass() {
+      const editing = isToolModeEnabled();
+      allCells.forEach((el) => {
+        el.classList.toggle("editable-drag", editing);
+      });
+    }
+
+    function setToolStatus(text) {
+      toolStatus.textContent = text;
+    }
+
+    function getCellLabel(el) {
+      const st = spriteState.get(el);
+      return `${st.asset} [z:${st.z}]`;
+    }
+
+    function refreshNewCellAssets() {
+      const assets = Array.from(
+        new Set(allCells.map((el) => (el.getAttribute("src") || "").trim()).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b));
+      const prev = newCellAsset.value;
+      newCellAsset.innerHTML = "";
+      assets.forEach((asset) => {
+        const opt = document.createElement("option");
+        opt.value = asset;
+        opt.textContent = asset;
+        newCellAsset.appendChild(opt);
+      });
+      if (assets.length) {
+        newCellAsset.value = assets.includes(prev) ? prev : assets[0];
+      }
+    }
+
+    function refreshSelect() {
+      const prev = selectedCell;
+      cellSelect.innerHTML = "";
+      allCells
+        .slice()
+        .sort((a, b) => spriteState.get(a).z - spriteState.get(b).z)
+        .forEach((el) => {
+          const option = document.createElement("option");
+          option.value = String(allCells.indexOf(el));
+          option.textContent = getCellLabel(el);
+          cellSelect.appendChild(option);
+        });
+      if (prev && allCells.includes(prev)) {
+        cellSelect.value = String(allCells.indexOf(prev));
+      } else if (allCells.length) {
+        cellSelect.value = "0";
+        selectedCell = allCells[0];
+      }
+    }
+
+    function syncInputsFromSelected() {
+      if (!selectedCell) return;
+      const st = spriteState.get(selectedCell);
+      cellX.value = String(Math.round(st.x));
+      cellY.value = String(Math.round(st.y));
+      cellScale.value = String(st.scale);
+      cellRz.value = String(st.rotationZ);
+    }
+
+    function applyStateToCell(el) {
+      const st = spriteState.get(el);
+      el.style.left = `${st.x}px`;
+      el.style.top = `${st.y}px`;
+      el.style.zIndex = String(st.z);
+      normalizeSpriteRender(el);
+      pathCells = buildPathCells();
+      assignBonusSlots();
+      if (pathCells.length) {
+        chipPathIndex = Math.max(0, Math.min(pathCells.length - 1, chipPathIndex));
+      }
+    }
+
+    function bindCellClick(el) {
+      el.addEventListener("click", () => {
+        if (suppressNextCellClick) return;
+        if (isToolModeEnabled()) {
+          selectedCell = el;
+          refreshSelect();
+          syncInputsFromSelected();
+          return;
+        }
+        const idx = Number(el.dataset.pathIndex);
+        if (Number.isFinite(idx)) moveChipToPathIndex(idx);
+      });
+
+      el.addEventListener("pointerdown", (e) => {
+        if (!isToolModeEnabled()) return;
+        if (e.button !== 0) return;
+        const st = spriteState.get(el);
+        if (!st) return;
+        e.preventDefault();
+        selectedCell = el;
+        refreshSelect();
+        syncInputsFromSelected();
+        dragState = {
+          el,
+          startX: e.clientX,
+          startY: e.clientY,
+          originX: st.x,
+          originY: st.y,
+          moved: false
+        };
+        el.classList.add("dragging");
+      });
+    }
+
+    document.addEventListener("pointermove", (e) => {
+      if (!dragState) return;
+      const dx = e.clientX - dragState.startX;
+      const dy = e.clientY - dragState.startY;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) dragState.moved = true;
+      const st = spriteState.get(dragState.el);
+      if (!st) return;
+      st.x = Math.round(dragState.originX + dx);
+      st.y = Math.round(dragState.originY + dy);
+      applyStateToCell(dragState.el);
+      syncInputsFromSelected();
+    });
+
+    document.addEventListener("pointerup", () => {
+      if (!dragState) return;
+      dragState.el.classList.remove("dragging");
+      if (dragState.moved) {
+        suppressNextCellClick = true;
+        setTimeout(() => {
+          suppressNextCellClick = false;
+        }, 0);
+      }
+      dragState = null;
+    });
+
+    function parseNum(v, fallback = 0) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function modifySelected(fn) {
+      if (!selectedCell) return;
+      const st = spriteState.get(selectedCell);
+      fn(st);
+      applyStateToCell(selectedCell);
+      syncInputsFromSelected();
+    }
+
+    hideTools.addEventListener("click", () => {
+      toolPanel.classList.add("hidden");
+      showTools.classList.add("visible");
+      refreshDragModeClass();
+    });
+
+    showTools.addEventListener("click", () => {
+      toolPanel.classList.remove("hidden");
+      showTools.classList.remove("visible");
+      refreshDragModeClass();
+    });
+
+    cellSelect.addEventListener("change", () => {
+      const idx = Number(cellSelect.value);
+      selectedCell = Number.isFinite(idx) ? allCells[idx] : null;
+      syncInputsFromSelected();
+    });
+
+    document.querySelectorAll("[data-move]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const step = Math.max(1, parseNum(cellStep.value, 5));
+        const dir = btn.dataset.move;
+        modifySelected((st) => {
+          if (dir === "up") st.y -= step;
+          if (dir === "down") st.y += step;
+          if (dir === "left") st.x -= step;
+          if (dir === "right") st.x += step;
+        });
+      });
+    });
+
+    applyXY.addEventListener("click", () => {
+      modifySelected((st) => {
+        st.x = parseNum(cellX.value, st.x);
+        st.y = parseNum(cellY.value, st.y);
+      });
+    });
+
+    applySR.addEventListener("click", () => {
+      modifySelected((st) => {
+        st.scale = parseNum(cellScale.value, st.scale);
+        st.rotationZ = parseNum(cellRz.value, st.rotationZ);
+      });
+    });
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        return ok;
+      }
+    }
+
+    copyOne.addEventListener("click", async () => {
+      if (!selectedCell) return;
+      const st = spriteState.get(selectedCell);
+      const payload = {
+        id: selectedCell.getAttribute("data-id") || "",
+        asset: selectedCell.getAttribute("src"),
+        x: Math.round(st.x),
+        y: Math.round(st.y),
+        rotationX: st.rotationX,
+        rotationY: st.rotationY,
+        rotationZ: st.rotationZ,
+        scale: Number(st.scale.toFixed(4)),
+        zIndex: st.z
+      };
+      const ok = await copyText(JSON.stringify(payload, null, 2));
+      setToolStatus(ok ? "Скопировано: выбранная клетка" : "Не удалось скопировать");
+    });
+
+    copyAllCells.addEventListener("click", async () => {
+      const payload = allCells
+        .slice()
+        .sort((a, b) => spriteState.get(a).z - spriteState.get(b).z)
+        .map((el, i) => {
+          const st = spriteState.get(el);
+          return {
+            id: `spr${i + 1}`,
+            asset: el.getAttribute("src"),
+            x: Math.round(st.x),
+            y: Math.round(st.y),
+            rotationX: st.rotationX,
+            rotationY: st.rotationY,
+            rotationZ: st.rotationZ,
+            scale: Number(st.scale.toFixed(4)),
+            zIndex: st.z
+          };
+        });
+      const ok = await copyText(JSON.stringify(payload, null, 2));
+      setToolStatus(ok ? "Скопировано: все клетки" : "Не удалось скопировать");
+    });
+
+    deleteCellBtn.addEventListener("click", () => {
+      if (!selectedCell) {
+        setToolStatus("Нет выбранной клетки");
+        return;
+      }
+      const idx = allCells.indexOf(selectedCell);
+      if (idx < 0) return;
+
+      const removed = selectedCell;
+      removed.remove();
+      allCells.splice(idx, 1);
+      selectedCell = allCells[Math.max(0, idx - 1)] || null;
+
+      pathCells = buildPathCells();
+      assignBonusSlots();
+      if (pathCells.length) {
+        chipPathIndex = Math.max(0, Math.min(pathCells.length - 1, chipPathIndex));
+        const anchor = getCellAnchor(pathCells[chipPathIndex].el);
+        setChipCell(anchor.x, anchor.y);
+      }
+
+      refreshSelect();
+      refreshNewCellAssets();
+      syncInputsFromSelected();
+      setToolStatus("Клетка удалена");
+    });
+
+    addCellBtn.addEventListener("click", () => {
+      const asset = (newCellAsset.value || "").trim();
+      if (!asset) {
+        setToolStatus("Выбери ассет для новой клетки");
+        return;
+      }
+
+      const ref = selectedCell ? spriteState.get(selectedCell) : null;
+      const nextZ =
+        allCells.length > 0
+          ? Math.max(...allCells.map((el) => spriteState.get(el).z)) + 1
+          : 0;
+
+      const img = document.createElement("img");
+      img.className = "placed-sprite";
+      img.src = asset;
+      img.alt = "";
+
+      const state = {
+        x: ref ? ref.x + 24 : 640,
+        y: ref ? ref.y + 24 : 360,
+        z: nextZ,
+        rotationX: ref ? ref.rotationX : 0,
+        rotationY: ref ? ref.rotationY : 0,
+        rotationZ: ref ? ref.rotationZ : 0,
+        scale: ref ? ref.scale : 0.05,
+        asset: asset.toLowerCase()
+      };
+      spriteState.set(img, state);
+
+      const container = document.querySelector(".container");
+      const chipEl = document.getElementById("chip-view");
+      container.insertBefore(img, chipEl);
+      allCells.push(img);
+      bindCellClick(img);
+
+      if (img.complete) {
+        applyStateToCell(img);
+      } else {
+        img.addEventListener("load", () => applyStateToCell(img), { once: true });
+      }
+
+      selectedCell = img;
+      refreshSelect();
+      refreshNewCellAssets();
+      syncInputsFromSelected();
+      setToolStatus(`Добавлена клетка: ${asset}`);
+    });
+
+    // Match sprite rendering with editor.html (pseudo-3D for X/Y and Z-spin on 2D plane).
+    function parseNumber(str, fallback = 0) {
+      const n = Number(str);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function normalizeSpriteRender(img) {
+      const st = spriteState.get(img) || {
+        rotationX: 0,
+        rotationY: 0,
+        rotationZ: 0,
+        scale: 1
+      };
+
+      const rx = st.rotationX;
+      const ry = st.rotationY;
+      const rz = st.rotationZ;
+      const baseScale = st.scale;
+
+      const rxRad = (rx * Math.PI) / 180;
+      const ryRad = (ry * Math.PI) / 180;
+      const sx = Math.max(0.1, Math.cos(ryRad)) * baseScale;
+      const sy = Math.max(0.1, Math.cos(rxRad)) * baseScale;
+      const shiftX = Math.sin(ryRad) * 0.18 * img.naturalWidth * baseScale;
+      const shiftY = Math.sin(rxRad) * 0.18 * img.naturalHeight * baseScale;
+
+      img.style.transform =
+        `translate(-50%, -50%) translate(${shiftX}px, ${shiftY}px) rotate(${rz}deg) scale(${sx}, ${sy})`;
+    }
+
+    function initSpritesRender() {
+      document.querySelectorAll(".placed-sprite").forEach((img) => {
+        if (img.complete) {
+          normalizeSpriteRender(img);
+        } else {
+          img.addEventListener("load", () => normalizeSpriteRender(img), { once: true });
+        }
+      });
+    }
+
+    refreshSelect();
+    refreshNewCellAssets();
+    syncInputsFromSelected();
+    refreshDragModeClass();
+    setToolStatus("Панель готова. Можно скрыть и вернуть кнопкой «Панель».");
+    initSpritesRender();
+  </script>
+</body>
+
+</html>
